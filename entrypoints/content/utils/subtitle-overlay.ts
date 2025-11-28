@@ -1,22 +1,63 @@
+// entrypoints/content/utils/subtitle-overlay.ts
 import { Subtitle } from "../interfaces/Subtitle";
+import { browser } from "wxt/browser";
+import { DEFAULT_SETTINGS, SETTINGS_KEY, SubtitleSettings } from "./settings";
+
+let currentSettings = { ...DEFAULT_SETTINGS };
 
 /**
- * Removes the sync listener and clears the overlay.
- * Call this when switching videos or when no subtitles are available.
+ * Applies styles to the overlay and manages Native Caption visibility
  */
+function applyState(overlay: HTMLElement | null) {
+  // 1. Manage Native Captions (Toggle)
+  const styleId = "wxt-hide-native-subs";
+  let styleTag = document.getElementById(styleId);
+
+  if (currentSettings.enabled) {
+    // Enable Extension: Hide Native YouTube Captions
+    if (!styleTag) {
+      styleTag = document.createElement("style");
+      styleTag.id = styleId;
+      styleTag.innerHTML = `
+        .ytp-caption-window-container, .caption-window {
+          display: none !important;
+        }
+      `;
+      document.head.appendChild(styleTag);
+    }
+  } else {
+    // Disable Extension: Show Native YouTube Captions
+    if (styleTag) {
+      styleTag.remove();
+    }
+  }
+
+  // 2. Manage Overlay Appearance
+  if (!overlay) return;
+
+  if (!currentSettings.enabled) {
+    overlay.style.display = "none";
+    return; // Don't bother styling if hidden
+  }
+
+  // Apply visual settings
+  Object.assign(overlay.style, {
+    fontSize: `${currentSettings.fontSize}px`,
+    backgroundColor: `rgba(0, 0, 0, ${currentSettings.bgOpacity})`,
+    color: `rgba(255, 255, 255, ${currentSettings.textOpacity})`,
+    display: overlay.innerHTML ? "block" : "none", // Keep hidden if empty
+  });
+}
+
 export function cleanupSubtitleSync() {
   const video = document.querySelector(
     "video.html5-main-video"
   ) as HTMLVideoElement;
-
-  // Remove the listener if it exists
   if (video && (video as any).__wxt_sync_listener) {
     video.removeEventListener("timeupdate", (video as any).__wxt_sync_listener);
     delete (video as any).__wxt_sync_listener;
-    console.log("[WXT-DEBUG] Previous sync listener removed.");
   }
 
-  // Clear the overlay content and hide it
   const overlay = document.getElementById("wxt-subtitle-layer");
   if (overlay) {
     overlay.style.display = "none";
@@ -24,44 +65,45 @@ export function cleanupSubtitleSync() {
   }
 }
 
-/**
- * Starts the subtitle sync loop.
- * Creates an overlay on the video player and updates text based on video time.
- */
-export function startSubtitleSync(subtitles: Subtitle[]) {
-  console.log("[WXT-DEBUG] Initializing Subtitle UI...");
-
-  // 1. CLEANUP FIRST
-  cleanupSubtitleSync();
-
-  const video = (document.querySelector("video.html5-main-video") ||
-    document.querySelector("video")) as HTMLVideoElement;
-
-  if (!video) {
-    console.error("[WXT-DEBUG] No video element found. UI Sync aborted.");
-    return;
+export async function startSubtitleSync(subtitles: Subtitle[]) {
+  // 1. Load Settings
+  const stored = await browser.storage.local.get(SETTINGS_KEY);
+  if (stored[SETTINGS_KEY]) {
+    currentSettings = stored[SETTINGS_KEY];
   }
 
-  // Initialize Overlay (Safe to call multiple times, it reuses the element)
+  // 2. Setup UI
+  cleanupSubtitleSync();
   const overlay = createOverlay();
+  applyState(overlay);
 
-  // Sync Logic variables
+  // 3. Listen for Storage Changes (Real-time Toggle)
+  browser.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local" && changes[SETTINGS_KEY]) {
+      currentSettings = changes[SETTINGS_KEY].newValue;
+      const activeOverlay = document.getElementById("wxt-subtitle-layer");
+      applyState(activeOverlay);
+    }
+  });
+
+  // 4. Start Sync Loop
+  const video = document.querySelector(
+    "video.html5-main-video"
+  ) as HTMLVideoElement;
+  if (!video) return;
+
   let lastIndex = -1;
-  let lastSecondLogged = -1;
 
   const onTimeUpdate = () => {
-    const currentTime = video.currentTime;
-
-    // DEBUG HEARTBEAT (Optional logging)
-    const currentSecond = Math.floor(currentTime);
-    if (currentSecond !== lastSecondLogged) {
-      lastSecondLogged = currentSecond;
-      if (!document.getElementById("wxt-subtitle-layer")) {
-        console.warn("[WXT-DEBUG] Warning: Overlay element disappeared!");
-      }
+    // If disabled, ensure overlay is hidden and do nothing
+    if (!currentSettings.enabled) {
+      if (overlay.style.display !== "none") overlay.style.display = "none";
+      return;
     }
 
-    // Optimization: Check if still inside the current subtitle
+    const currentTime = video.currentTime;
+
+    // Optimization: Check current subtitle first
     if (lastIndex !== -1) {
       const currentSub = subtitles[lastIndex];
       if (
@@ -73,23 +115,20 @@ export function startSubtitleSync(subtitles: Subtitle[]) {
       }
     }
 
-    // Search for new subtitle
+    // Find new subtitle
     const foundIndex = subtitles.findIndex(
       (s) => currentTime >= s.start && currentTime <= s.end
     );
 
     if (foundIndex !== -1) {
       lastIndex = foundIndex;
-      const sub = subtitles[foundIndex];
-      // Convert newlines to breaks for HTML
-      const htmlText = sub.text.replace(/\n/g, "<br>");
+      const htmlText = subtitles[foundIndex].text.replace(/\n/g, "<br>");
 
       if (overlay.innerHTML !== htmlText) {
         overlay.innerHTML = htmlText;
         overlay.style.display = "block";
       }
     } else {
-      // No active subtitle
       if (lastIndex !== -1) {
         lastIndex = -1;
         overlay.style.display = "none";
@@ -100,14 +139,8 @@ export function startSubtitleSync(subtitles: Subtitle[]) {
 
   video.addEventListener("timeupdate", onTimeUpdate);
   (video as any).__wxt_sync_listener = onTimeUpdate;
-
-  console.log(`[WXT-DEBUG] UI Sync Active.`);
 }
 
-/**
- * Creates a minimalist overlay that adapts to YouTube's UI.
- * It uses a MutationObserver to detect when controls appear/disappear.
- */
 function createOverlay(): HTMLElement {
   const id = "wxt-subtitle-layer";
   let overlay = document.getElementById(id);
@@ -121,55 +154,48 @@ function createOverlay(): HTMLElement {
       position: "absolute",
       left: "50%",
       transform: "translateX(-50%)",
-      bottom: "10%", // Default position
-      transition: "bottom 0.2s ease-out", // Smooth animation when moving up/down
-      color: "#FFFFFF",
+      bottom: "10%",
       fontFamily: '"YouTube Noto", Roboto, Arial, sans-serif',
-      fontSize: "20px", // Slightly larger for better readability
       fontWeight: "600",
       textAlign: "center",
       lineHeight: "1.4",
-      textShadow: "0px 2px 4px rgba(0,0,0,0.9)",
-      backgroundColor: "rgba(0, 0, 0, 0.6)",
       borderRadius: "8px",
       padding: "8px 16px",
-      pointerEvents: "none",
-      userSelect: "none",
       zIndex: "2147483647",
-      width: "auto",
       maxWidth: "80%",
       display: "none",
+      transition:
+        "bottom 0.2s, background-color 0.2s, color 0.2s, font-size 0.2s",
+
+      // Interaction Styles
+      pointerEvents: "auto", // Allow interactions
+      userSelect: "text", // Allow highlighting
+      cursor: "text", // Show text cursor
     });
 
     const player = document.getElementById("movie_player") || document.body;
     player.appendChild(overlay);
 
-    // --- FLEXIBLE POSITIONING LOGIC ---
-    // We observe the player for the 'ytp-autohide' class.
-    // If present: Controls are HIDDEN -> Move text DOWN (10%)
-    // If missing: Controls are VISIBLE -> Move text UP (20% to clear bar)
+    // --- SMART EVENT HANDLING ---
+    const stopProp = (e: Event) => e.stopPropagation();
 
+    // 1. Stop these to prevent YouTube from Pausing/Fullscreening
+    overlay.addEventListener("mousedown", stopProp);
+    overlay.addEventListener("click", stopProp);
+    overlay.addEventListener("dblclick", stopProp);
+
+    // 2. We explicitly DO NOT stop 'mouseup'.
+    // This allows the "selection complete" event to reach the browser/extensions
+    // so the Translate popup can trigger.
+
+    // Auto-adjust position based on controls
     const updatePosition = () => {
-      // 'ytp-autohide' means controls are hidden (mouse is away)
       const controlsHidden = player.classList.contains("ytp-autohide");
-
-      if (controlsHidden) {
-        overlay!.style.bottom = "10%";
-      } else {
-        // Controls are visible, push text up
-        overlay!.style.bottom = "20%";
-      }
+      overlay!.style.bottom = controlsHidden ? "10%" : "20%";
     };
-
-    // 1. Initial check
-    updatePosition();
-
-    // 2. Watch for class changes on the player
     const observer = new MutationObserver(updatePosition);
-    observer.observe(player, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
+    observer.observe(player, { attributes: true, attributeFilter: ["class"] });
+    updatePosition();
   }
 
   return overlay;

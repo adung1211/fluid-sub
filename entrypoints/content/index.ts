@@ -1,3 +1,4 @@
+// entrypoints/content/index.ts
 import { fetchSubtitles } from "./utils/fetcher";
 import {
   startSubtitleSync,
@@ -7,7 +8,7 @@ import {
 export default defineContentScript({
   matches: ["*://www.youtube.com/*"],
   main() {
-    console.log("[WXT-DEBUG] Extension Loaded (Main Controller)");
+    console.log("[WXT-DEBUG] Main Controller Loaded");
 
     let currentVideoId: string | null = null;
 
@@ -24,27 +25,15 @@ export default defineContentScript({
         return;
       }
 
-      console.log(`[WXT-DEBUG] New Video Detected: ${newVideoId}`);
       currentVideoId = newVideoId;
+      cleanupSubtitleSync(); // Clear previous video state
 
-      // --- CRITICAL FIX START ---
-      // Stop doing anything related to the previous video immediately
-      cleanupSubtitleSync();
-      // --- CRITICAL FIX END ---
-
-      // 1. Fetching (Returns Parsed JSON now)
       const subtitles = await fetchSubtitles(newVideoId, videoUrl);
 
       if (!subtitles || subtitles.length === 0) {
-        console.log("[WXT-DEBUG] No subtitles available.");
-        // We already cleaned up, so we just return here.
-        // The extension is now "doing absolutely nothing".
         return;
       }
 
-      console.log(`[WXT-DEBUG] Loaded ${subtitles.length} lines from backend.`);
-
-      // 2. Rendering
       startSubtitleSync(subtitles);
     };
 
@@ -52,6 +41,7 @@ export default defineContentScript({
       processVideo();
     });
 
+    // Fallback polling for SPA navigation
     setInterval(() => {
       const urlParams = new URLSearchParams(location.search);
       const vid = urlParams.get("v");

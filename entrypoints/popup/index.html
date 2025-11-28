@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subtitle Settings</title>
+    <style>
+      body {
+        width: 280px;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        padding: 16px;
+        background: #202020;
+        color: #e0e0e0;
+        user-select: none;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #444;
+        padding-bottom: 12px;
+        margin-bottom: 16px;
+      }
+      h2 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      
+      /* Main Toggle Switch */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+      }
+      .switch input { opacity: 0; width: 0; height: 0; }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #555;
+        transition: .4s;
+        border-radius: 34px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+      }
+      input:checked + .slider { background-color: #4CAF50; }
+      input:checked + .slider:before { transform: translateX(20px); }
+
+      /* Controls */
+      .controls-container {
+        opacity: 1;
+        transition: opacity 0.3s;
+      }
+      .controls-container.disabled {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+      .control { margin-bottom: 16px; }
+      label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        margin-bottom: 6px;
+        color: #aaa;
+      }
+      input[type="range"] {
+        width: 100%;
+        accent-color: #4CAF50;
+        cursor: pointer;
+        height: 4px;
+        background: #444;
+        border-radius: 2px;
+        appearance: none;
+      }
+      .value { color: #fff; font-weight: bold; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h2>Enable Captions</h2>
+      <label class="switch">
+        <input type="checkbox" id="enabled">
+        <span class="slider"></span>
+      </label>
+    </header>
+
+    <div id="controls" class="controls-container">
+      <div class="control">
+        <label>Font Size: <span id="val-size" class="value">24px</span></label>
+        <input type="range" id="fontSize" min="12" max="60" step="1">
+      </div>
+
+      <div class="control">
+        <label>Background Opacity: <span id="val-bg" class="value">0.6</span></label>
+        <input type="range" id="bgOpacity" min="0" max="1" step="0.1">
+      </div>
+
+      <div class="control">
+        <label>Text Opacity: <span id="val-text" class="value">1.0</span></label>
+        <input type="range" id="textOpacity" min="0.1" max="1" step="0.1">
+      </div>
+    </div>
+
+    <script type="module" src="./index.ts"></script>
+  </body>
+</html>
