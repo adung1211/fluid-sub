@@ -27,7 +27,15 @@ export async function fetchSubtitles(
     });
 
     if (!response || !response.success) {
-      console.error(`[WXT-DEBUG] Backend Error: ${response?.error}`);
+      const errorMsg = response?.error || "Unknown Error";
+
+      // If it's just "No subtitles", treat it as Info (Yellow/White), not Error (Red)
+      if (errorMsg.includes("No subtitles found")) {
+        console.log(`[WXT-DEBUG] Info: ${errorMsg} (Skipping video)`);
+      } else {
+        // Only log REAL errors (like 429 or connection fails) as errors
+        console.error(`[WXT-DEBUG] Backend Error: ${errorMsg}`);
+      }
       return null;
     }
 

@@ -1,5 +1,8 @@
 import { fetchSubtitles } from "./utils/fetcher";
-import { startSubtitleSync } from "./utils/ui";
+import {
+  startSubtitleSync,
+  cleanupSubtitleSync,
+} from "./utils/subtitle-overlay";
 
 export default defineContentScript({
   matches: ["*://www.youtube.com/*"],
@@ -24,11 +27,18 @@ export default defineContentScript({
       console.log(`[WXT-DEBUG] New Video Detected: ${newVideoId}`);
       currentVideoId = newVideoId;
 
+      // --- CRITICAL FIX START ---
+      // Stop doing anything related to the previous video immediately
+      cleanupSubtitleSync();
+      // --- CRITICAL FIX END ---
+
       // 1. Fetching (Returns Parsed JSON now)
       const subtitles = await fetchSubtitles(newVideoId, videoUrl);
 
       if (!subtitles || subtitles.length === 0) {
         console.log("[WXT-DEBUG] No subtitles available.");
+        // We already cleaned up, so we just return here.
+        // The extension is now "doing absolutely nothing".
         return;
       }
 
