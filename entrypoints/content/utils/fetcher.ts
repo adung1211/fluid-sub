@@ -1,25 +1,24 @@
 import { browser } from "wxt/browser";
+import { Subtitle } from "../interfaces/Subtitle";
 
 /**
- * Fetches subtitles for a given video ID.
- * 1. Checks Local Storage Cache.
- * 2. If missing, asks the Background Script to fetch from Python.
- * 3. Saves result to Cache.
+ * Fetches parsed subtitles for a given video ID.
+ * Returns the Array of Subtitle objects directly from the backend/cache.
  */
 export async function fetchSubtitles(
   videoId: string,
   videoUrl: string
-): Promise<string | null> {
-  const cacheKey = `subs_${videoId}`;
+): Promise<Subtitle[] | null> {
+  const cacheKey = `subs_parsed_${videoId}`;
 
   // 1. Try Cache
   const cachedData = await browser.storage.local.get(cacheKey);
   if (cachedData[cacheKey]) {
     console.log(`[WXT-DEBUG] Cache Hit for ${videoId}`);
-    return cachedData[cacheKey];
+    return cachedData[cacheKey] as Subtitle[];
   }
 
-  // 2. Fetch from Python Backend (via Background Script)
+  // 2. Fetch from Python Backend
   console.log(`[WXT-DEBUG] Cache Miss. Fetching from Python...`);
   try {
     const response = await browser.runtime.sendMessage({
@@ -32,9 +31,12 @@ export async function fetchSubtitles(
       return null;
     }
 
+    // response.subtitles is now an Array of objects, not a string
+    const subtitles = response.subtitles as Subtitle[];
+
     // 3. Save to Cache
-    await browser.storage.local.set({ [cacheKey]: response.subtitles });
-    return response.subtitles;
+    await browser.storage.local.set({ [cacheKey]: subtitles });
+    return subtitles;
   } catch (err) {
     console.error("[WXT-DEBUG] Network Error:", err);
     return null;
