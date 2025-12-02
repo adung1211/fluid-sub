@@ -1,20 +1,18 @@
-// entrypoints/content/utils/subtitle-overlay.ts
 import { Subtitle } from "../interfaces/Subtitle";
 import { browser } from "wxt/browser";
-import { DEFAULT_SETTINGS, SETTINGS_KEY, SubtitleSettings } from "./settings";
+import { DEFAULT_SETTINGS, SETTINGS_KEY } from "./settings";
+import { createHighlighter, HighlighterFn } from "./highlighter";
+import { TokenData } from "./fetcher";
 
 let currentSettings = { ...DEFAULT_SETTINGS };
 
-/**
- * Applies styles to the overlay and manages Native Caption visibility
- */
+// ... (applyState and cleanupSubtitleSync remain unchanged) ...
 function applyState(overlay: HTMLElement | null) {
   // 1. Manage Native Captions (Toggle)
   const styleId = "wxt-hide-native-subs";
   let styleTag = document.getElementById(styleId);
 
   if (currentSettings.enabled) {
-    // Enable Extension: Hide Native YouTube Captions
     if (!styleTag) {
       styleTag = document.createElement("style");
       styleTag.id = styleId;
@@ -26,10 +24,7 @@ function applyState(overlay: HTMLElement | null) {
       document.head.appendChild(styleTag);
     }
   } else {
-    // Disable Extension: Show Native YouTube Captions
-    if (styleTag) {
-      styleTag.remove();
-    }
+    if (styleTag) styleTag.remove();
   }
 
   // 2. Manage Overlay Appearance
@@ -37,15 +32,14 @@ function applyState(overlay: HTMLElement | null) {
 
   if (!currentSettings.enabled) {
     overlay.style.display = "none";
-    return; // Don't bother styling if hidden
+    return;
   }
 
-  // Apply visual settings
   Object.assign(overlay.style, {
     fontSize: `${currentSettings.fontSize}px`,
     backgroundColor: `rgba(0, 0, 0, ${currentSettings.bgOpacity})`,
     color: `rgba(255, 255, 255, ${currentSettings.textOpacity})`,
-    display: overlay.innerHTML ? "block" : "none", // Keep hidden if empty
+    display: overlay.innerHTML ? "block" : "none",
   });
 }
 
@@ -72,12 +66,38 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
     currentSettings = stored[SETTINGS_KEY];
   }
 
-  // 2. Setup UI
+  // 2. Prepare Highlighters from Master List
+  const urlParams = new URLSearchParams(location.search);
+  const videoId = urlParams.get("v");
+  const highlighters: HighlighterFn[] = [];
+
+  if (videoId) {
+    const rankCacheKey = `vocab_ranked_${videoId}`;
+    const storedData = await browser.storage.local.get(rankCacheKey);
+    const masterList = (storedData[rankCacheKey] as TokenData[]) || [];
+
+    if (masterList.length > 0) {
+      // --- Filter 1: Unknown / Gibberish (Gray) ---
+      const unknownWords = masterList
+        .filter((t) => t.category === "unknown")
+        .map((t) => t.word);
+
+      if (unknownWords.length > 0) {
+        console.log(
+          `[WXT-DEBUG] Highlighting ${unknownWords.length} Unknown Words (Gray)`
+        );
+        // #9e9e9e is a neutral gray
+        highlighters.push(createHighlighter(unknownWords, "#9e9e9e"));
+      }
+    }
+  }
+
+  // 3. Setup UI
   cleanupSubtitleSync();
   const overlay = createOverlay();
   applyState(overlay);
 
-  // 3. Listen for Storage Changes (Real-time Toggle)
+  // 4. Listen for Settings Changes
   browser.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === "local" && changes[SETTINGS_KEY]) {
       currentSettings = changes[SETTINGS_KEY].newValue;
@@ -86,7 +106,7 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
     }
   });
 
-  // 4. Start Sync Loop
+  // 5. Start Sync Loop
   const video = document.querySelector(
     "video.html5-main-video"
   ) as HTMLVideoElement;
@@ -95,7 +115,6 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
   let lastIndex = -1;
 
   const onTimeUpdate = () => {
-    // If disabled, ensure overlay is hidden and do nothing
     if (!currentSettings.enabled) {
       if (overlay.style.display !== "none") overlay.style.display = "none";
       return;
@@ -103,7 +122,6 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
 
     const currentTime = video.currentTime;
 
-    // Optimization: Check current subtitle first
     if (lastIndex !== -1) {
       const currentSub = subtitles[lastIndex];
       if (
@@ -115,14 +133,19 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
       }
     }
 
-    // Find new subtitle
     const foundIndex = subtitles.findIndex(
       (s) => currentTime >= s.start && currentTime <= s.end
     );
 
     if (foundIndex !== -1) {
       lastIndex = foundIndex;
-      const htmlText = subtitles[foundIndex].text.replace(/\n/g, "<br>");
+      let processedText = subtitles[foundIndex].text;
+
+      for (const highlight of highlighters) {
+        processedText = highlight(processedText);
+      }
+
+      const htmlText = processedText.replace(/\n/g, "<br>");
 
       if (overlay.innerHTML !== htmlText) {
         overlay.innerHTML = htmlText;
@@ -149,7 +172,6 @@ function createOverlay(): HTMLElement {
     overlay = document.createElement("div");
     overlay.id = id;
 
-    // Base Styles
     Object.assign(overlay.style, {
       position: "absolute",
       left: "50%",
@@ -166,29 +188,19 @@ function createOverlay(): HTMLElement {
       display: "none",
       transition:
         "bottom 0.2s, background-color 0.2s, color 0.2s, font-size 0.2s",
-
-      // Interaction Styles
-      pointerEvents: "auto", // Allow interactions
-      userSelect: "text", // Allow highlighting
-      cursor: "text", // Show text cursor
+      pointerEvents: "auto",
+      userSelect: "text",
+      cursor: "text",
     });
 
     const player = document.getElementById("movie_player") || document.body;
     player.appendChild(overlay);
 
-    // --- SMART EVENT HANDLING ---
     const stopProp = (e: Event) => e.stopPropagation();
-
-    // 1. Stop these to prevent YouTube from Pausing/Fullscreening
     overlay.addEventListener("mousedown", stopProp);
     overlay.addEventListener("click", stopProp);
     overlay.addEventListener("dblclick", stopProp);
 
-    // 2. We explicitly DO NOT stop 'mouseup'.
-    // This allows the "selection complete" event to reach the browser/extensions
-    // so the Translate popup can trigger.
-
-    // Auto-adjust position based on controls
     const updatePosition = () => {
       const controlsHidden = player.classList.contains("ytp-autohide");
       overlay!.style.bottom = controlsHidden ? "10%" : "20%";
