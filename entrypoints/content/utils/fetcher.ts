@@ -4,8 +4,10 @@ import { Subtitle } from "../interfaces/Subtitle";
 // Define the new unified shape for our tokens
 export interface TokenData {
   word: string;
-  category: "word" | "unknown"; // <--- Renamed 'nonsense' to 'unknown'
+  category: "word" | "unknown";
   difficulty_score: number;
+  root: string;
+  cefr: string;
   count: number;
   timestamps: number[];
 }
@@ -27,7 +29,7 @@ function printTopWords(words: TokenData[]) {
     Word: w.word,
     Category: w.category,
     Score: w.difficulty_score,
-    Count: w.count,
+    Root: w.root,
     "First 3 Times":
       w.timestamps.slice(0, 3).map(formatTime).join(", ") +
       (w.timestamps.length > 3 ? "..." : ""),

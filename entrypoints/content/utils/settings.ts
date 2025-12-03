@@ -8,7 +8,7 @@ export interface SubtitleSettings {
 
 export const DEFAULT_SETTINGS: SubtitleSettings = {
   enabled: true,
-  fontSize: 24,
+  fontSize: 16,
   bgOpacity: 0.6,
   textOpacity: 1.0,
 };
