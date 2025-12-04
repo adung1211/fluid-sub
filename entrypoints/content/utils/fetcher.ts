@@ -7,7 +7,6 @@ export interface TokenData {
   category: "word" | "unknown";
   root: string;
   cefr: string;
-  count: number;
   timestamps: number[];
 }
 
