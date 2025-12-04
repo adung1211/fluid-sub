@@ -20,6 +20,8 @@ async function init() {
     bgOpacity: get("bgOpacity"),
     textOpacity: get("textOpacity"),
     controlsDiv: document.getElementById("controls")!,
+    // Make sure you have added the button with this ID in your HTML
+    clearBtn: document.getElementById("clear-cache")!,
   };
 
   // Set initial values
@@ -48,6 +50,31 @@ async function init() {
   els.fontSize.addEventListener("input", save);
   els.bgOpacity.addEventListener("input", save);
   els.textOpacity.addEventListener("input", save);
+
+  // Debug: Clear Cache & Reload Listener
+  if (els.clearBtn) {
+    els.clearBtn.addEventListener("click", async () => {
+      if (!confirm("Clear cache and reload page?")) return;
+
+      // 1. Clear all storage (removes cached subs and rankings)
+      await browser.storage.local.clear();
+
+      // 2. Re-save current UI settings so we don't reset user preferences
+      await save();
+
+      // 3. Reload the active tab to re-fetch data
+      const tabs = await browser.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      if (tabs.length > 0 && tabs[0].id) {
+        await browser.tabs.reload(tabs[0].id);
+      }
+
+      // 4. Close the popup since the page is reloading
+      window.close();
+    });
+  }
 }
 
 function updateUIState(s: SubtitleSettings) {
