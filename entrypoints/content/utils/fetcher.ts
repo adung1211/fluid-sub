@@ -5,7 +5,6 @@ import { Subtitle } from "../interfaces/Subtitle";
 export interface TokenData {
   word: string;
   category: "word" | "unknown";
-  difficulty_score: number;
   root: string;
   cefr: string;
   count: number;
@@ -28,7 +27,7 @@ function printTopWords(words: TokenData[]) {
   const fullList = words.map((w) => ({
     Word: w.word,
     Category: w.category,
-    Score: w.difficulty_score,
+    Score: w.cefr,
     Root: w.root,
     "First 3 Times":
       w.timestamps.slice(0, 3).map(formatTime).join(", ") +
@@ -38,10 +37,33 @@ function printTopWords(words: TokenData[]) {
   console.groupCollapsed(
     `[WXT-DEBUG] 📊 Vocabulary List (${words.length} items) - Click to expand`
   );
-  console.table(fullList);
+
+  const CHUNK_SIZE = 1000;
+
+  if (fullList.length <= CHUNK_SIZE) {
+    // If small enough, just print it
+    console.table(fullList);
+  } else {
+    // If too large, split into chunks
+    console.warn(
+      `List is too large for a single table (${fullList.length} items). Splitting into chunks...`
+    );
+
+    for (let i = 0; i < fullList.length; i += CHUNK_SIZE) {
+      const chunk = fullList.slice(i, i + CHUNK_SIZE);
+      console.groupCollapsed(
+        `Rows ${i + 1} to ${Math.min(i + CHUNK_SIZE, fullList.length)}`
+      );
+      console.table(chunk);
+      console.groupEnd();
+    }
+  }
+
+  // Also log the raw array as a fallback because it's easier to search via Ctrl+F in console
+  console.log("Raw Data (Searchable):", fullList);
+
   console.groupEnd();
 }
-
 /**
  * Fetches parsed subtitles and their difficulty ranking.
  */
