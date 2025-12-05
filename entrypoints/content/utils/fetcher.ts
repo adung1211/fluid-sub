@@ -4,7 +4,7 @@ import { Subtitle } from "../interfaces/Subtitle";
 // Define the new unified shape for our tokens
 export interface TokenData {
   word: string;
-  category: "word" | "unknown";
+  category: "word" | "unknown" | "norank" | "norank_name";
   root: string;
   cefr: string;
   timestamps: number[];
@@ -90,6 +90,7 @@ export async function fetchSubtitles(
     if (rankResponse && rankResponse.success) {
       const masterList = rankResponse.data as TokenData[];
       console.log(`[WXT-DEBUG] Received ${masterList.length} tokens.`);
+      printTopWords(masterList);
 
       // Save data AND status 'success' atomically-ish
       await browser.storage.local.set({

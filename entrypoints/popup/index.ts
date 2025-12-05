@@ -6,46 +6,109 @@ import {
 } from "../content/utils/settings";
 import { TokenData } from "../content/utils/fetcher";
 
-const get = (id: string) => document.getElementById(id) as HTMLInputElement;
+const get = (id: string) => document.getElementById(id) as HTMLElement;
+const getInput = (id: string) =>
+  document.getElementById(id) as HTMLInputElement;
 const setText = (id: string, text: string) =>
   (document.getElementById(id)!.textContent = text);
 
-const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2", "unrank"];
+const formatTime = (seconds: number) => {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+};
+
+// Changed 'unrank' to 'norank'
+const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2", "norank"];
 
 async function init() {
   const els = {
-    enabled: get("enabled"),
-    fontSize: get("fontSize"),
-    bgOpacity: get("bgOpacity"),
-    textOpacity: get("textOpacity"),
-    highlightList: document.getElementById("highlight-list")!,
-    saveReloadBtn: document.getElementById("save-reload")!,
-    clearBtn: document.getElementById("clear-cache")!,
-    // Views
-    loadingView: document.getElementById("loading-view")!,
-    errorView: document.getElementById("error-view")!,
-    mainView: document.getElementById("main-view")!,
+    enabled: getInput("enabled"),
+    fontSize: getInput("fontSize"),
+    bgOpacity: getInput("bgOpacity"),
+    textOpacity: getInput("textOpacity"),
+    highlightList: get("highlight-list"),
+    saveReloadBtn: get("save-reload"),
+    clearBtn: get("clear-cache"),
+    loadingView: get("loading-view"),
+    errorView: get("error-view"),
+    mainView: get("main-view"),
+    modal: get("word-modal"),
+    modalClose: get("modal-close"),
+    modalTitle: get("modal-title"),
+    modalTableBody: get("modal-table-body"),
   };
 
-  // Helper to switch views
+  const closeModal = () => els.modal.classList.remove("show");
+  els.modalClose.addEventListener("click", closeModal);
+  window.addEventListener("click", (e) => {
+    if (e.target === els.modal) closeModal();
+  });
+
+  const openWordList = async (level: string) => {
+    const tabs = await browser.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (!tabs.length || !tabs[0].url) return;
+    const url = new URL(tabs[0].url);
+    const videoId = url.searchParams.get("v");
+    if (!videoId) return;
+
+    const key = `vocab_ranked_${videoId}`;
+    const stored = await browser.storage.local.get(key);
+    const masterList = (stored[key] as TokenData[]) || [];
+
+    const words = masterList.filter((t) => {
+      // Fix: Use 'norank' category, ignoring 'unknown' (garbage)
+      if (level === "norank") return t.category === "norank";
+      return t.cefr && t.cefr.toUpperCase() === level;
+    });
+
+    words.sort((a, b) => a.word.localeCompare(b.word));
+
+    setText(
+      "modal-title",
+      `${level === "norank" ? "Unranked" : level} Words (${words.length})`
+    );
+    els.modalTableBody.innerHTML = "";
+
+    if (words.length === 0) {
+      els.modalTableBody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding: 20px; color: #888;">No words found for this level.</td></tr>`;
+    } else {
+      const fragment = document.createDocumentFragment();
+      words.forEach((w) => {
+        const tr = document.createElement("tr");
+        const timeTags = w.timestamps
+          .slice(0, 5)
+          .map((t) => `<span class="timestamp-tag">${formatTime(t)}</span>`)
+          .join("");
+
+        tr.innerHTML = `
+          <td><strong>${w.word}</strong></td>
+          <td>${timeTags}${w.timestamps.length > 5 ? "..." : ""}</td>
+        `;
+        fragment.appendChild(tr);
+      });
+      els.modalTableBody.appendChild(fragment);
+    }
+    els.modal.classList.add("show");
+  };
+
   const showView = (view: "loading" | "error" | "main") => {
     els.loadingView.classList.remove("active");
     els.errorView.classList.remove("active");
     els.mainView.classList.remove("active");
-
     if (view === "loading") els.loadingView.classList.add("active");
     else if (view === "error") els.errorView.classList.add("active");
     else els.mainView.classList.add("active");
   };
 
-  // --- CORE LOGIC: Fetch State & Counts ---
   const refreshState = async () => {
     const tabs = await browser.tabs.query({
       active: true,
       currentWindow: true,
     });
-
-    // Default: If not on YouTube or no video, show error or simple controls
     if (
       !tabs.length ||
       !tabs[0].url ||
@@ -57,10 +120,8 @@ async function init() {
       ).innerText = "Not a YouTube Video";
       return;
     }
-
     const url = new URL(tabs[0].url);
     const videoId = url.searchParams.get("v");
-
     if (!videoId) {
       showView("error");
       return;
@@ -68,23 +129,20 @@ async function init() {
 
     const statusKey = `vocab_status_${videoId}`;
     const rankKey = `vocab_ranked_${videoId}`;
-
-    // Fetch Status and Data
     const stored = await browser.storage.local.get([
       statusKey,
       rankKey,
       SETTINGS_KEY,
     ]);
+
     const status = stored[statusKey];
     const rankData = (stored[rankKey] as TokenData[]) || [];
 
-    // 1. Handle Status UI
     if (status === "loading") {
       showView("loading");
     } else if (status === "not_found" || status === "error") {
       showView("error");
     } else if (status === "success" || rankData.length > 0) {
-      // Success: Calculate counts and render Main View
       const counts: Record<string, number> = {
         A1: 0,
         A2: 0,
@@ -92,28 +150,22 @@ async function init() {
         B2: 0,
         C1: 0,
         C2: 0,
-        unrank: 0,
+        norank: 0,
       };
-
       rankData.forEach((t) => {
-        if (t.category === "unknown") {
-          counts.unrank++;
-        } else if (t.category === "word" && t.cefr) {
-          const level = t.cefr.toUpperCase();
-          if (counts[level] !== undefined) {
-            counts[level]++;
-          }
+        // Fix: Count 'norank' correctly
+        if (t.category === "norank") counts.norank++;
+        else if (t.category === "word" && t.cefr) {
+          const lvl = t.cefr.toUpperCase();
+          if (counts[lvl] !== undefined) counts[lvl]++;
         }
       });
-
       renderHighlightControls(counts, stored[SETTINGS_KEY]);
       showView("main");
     } else {
-      // Fallback: If no status found yet (maybe just opened), assume loading if script is active
       showView("loading");
     }
 
-    // 2. Sync Global Settings (like font size) which are independent of video status
     const settings = { ...DEFAULT_SETTINGS, ...(stored[SETTINGS_KEY] || {}) };
     els.enabled.checked = settings.enabled;
     els.fontSize.value = String(settings.fontSize);
@@ -122,7 +174,6 @@ async function init() {
     updateValUI(settings);
   };
 
-  // Helper to render the dynamic list
   const renderHighlightControls = (
     counts: Record<string, number>,
     storedSettings: any
@@ -140,7 +191,7 @@ async function init() {
     LEVELS.forEach((level) => {
       const row = document.createElement("div");
       row.className = "highlight-row";
-      const labelText = level === "unrank" ? "unrank" : level;
+      const labelText = level === "norank" ? "NoCerf" : level;
       const count = counts[level] || 0;
       const descText = `${count} words`;
 
@@ -149,16 +200,16 @@ async function init() {
           <div class="cb-wrapper">
              <input type="checkbox" id="hl-en-${level}">
           </div>
-          <span class="highlight-label">${labelText}</span>
+          <span class="highlight-label" id="hl-lbl-${level}" title="Click to see list">${labelText}</span>
           <span class="highlight-desc">${descText}</span>
         </div>
         <input type="color" id="hl-col-${level}">
       `;
       els.highlightList.appendChild(row);
 
-      // Attach Listeners immediately after creation
       const cb = row.querySelector(`#hl-en-${level}`) as HTMLInputElement;
       const col = row.querySelector(`#hl-col-${level}`) as HTMLInputElement;
+      const lbl = row.querySelector(`#hl-lbl-${level}`) as HTMLElement;
 
       if (settings.highlights[level]) {
         cb.checked = settings.highlights[level].enabled;
@@ -167,6 +218,7 @@ async function init() {
 
       cb.addEventListener("change", saveSettings);
       col.addEventListener("input", saveSettings);
+      lbl.addEventListener("click", () => openWordList(level));
     });
   };
 
@@ -177,7 +229,6 @@ async function init() {
   };
 
   const saveSettings = async () => {
-    // Re-read current UI state
     const currentSettings = await browser.storage.local.get(SETTINGS_KEY);
     const settings = {
       ...DEFAULT_SETTINGS,
@@ -189,7 +240,6 @@ async function init() {
     settings.bgOpacity = Number(els.bgOpacity.value);
     settings.textOpacity = Number(els.textOpacity.value);
 
-    // Update highlights
     LEVELS.forEach((level) => {
       const cb = document.getElementById(`hl-en-${level}`) as HTMLInputElement;
       const col = document.getElementById(
@@ -205,15 +255,9 @@ async function init() {
     await browser.storage.local.set({ [SETTINGS_KEY]: settings });
   };
 
-  // --- LISTENERS ---
-
-  // 1. Initial Load
   refreshState();
-
-  // 2. Real-time Listener for Storage Changes (Background updates status -> Popup updates UI)
   browser.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === "local") {
-      // If status changed or new vocab data arrived, refresh
       const keys = Object.keys(changes);
       if (
         keys.some(
@@ -225,7 +269,6 @@ async function init() {
     }
   });
 
-  // 3. UI Listeners
   els.enabled.addEventListener("change", saveSettings);
   els.fontSize.addEventListener("input", saveSettings);
   els.bgOpacity.addEventListener("input", saveSettings);

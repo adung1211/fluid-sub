@@ -6,7 +6,6 @@ import { TokenData } from "./fetcher";
 
 let currentSettings: SubtitleSettings = { ...DEFAULT_SETTINGS };
 
-// ... (applyState and cleanupSubtitleSync remain unchanged) ...
 function applyState(overlay: HTMLElement | null) {
   const styleId = "wxt-hide-native-subs";
   let styleTag = document.getElementById(styleId);
@@ -51,7 +50,6 @@ export function cleanupSubtitleSync() {
 }
 
 export async function startSubtitleSync(subtitles: Subtitle[]) {
-  // 1. Load Settings
   const stored = await browser.storage.local.get(SETTINGS_KEY);
   if (stored[SETTINGS_KEY]) {
     currentSettings = {
@@ -64,7 +62,6 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
     };
   }
 
-  // 2. Prepare Highlighters based on Settings
   const urlParams = new URLSearchParams(location.search);
   const videoId = urlParams.get("v");
   const highlighters: HighlighterFn[] = [];
@@ -75,7 +72,7 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
     const masterList = (storedData[rankCacheKey] as TokenData[]) || [];
 
     if (masterList.length > 0) {
-      // Loop through settings categories (A1..C2, unrank)
+      // Loop through categories (A1..C2, norank)
       Object.keys(currentSettings.highlights).forEach((key) => {
         const option = currentSettings.highlights[key];
 
@@ -83,12 +80,13 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
 
         let wordsToHighlight: string[] = [];
 
-        if (key === "unrank") {
+        if (key === "norank") {
+          // Fix: Only highlight 'norank', ignoring 'unknown' (gibberish)
           wordsToHighlight = masterList
-            .filter((t) => t.category === "unknown")
+            .filter((t) => t.category === "norank")
             .map((t) => t.word);
         } else {
-          // Match CEFR level (case-insensitive)
+          // CEFR levels
           wordsToHighlight = masterList
             .filter(
               (t) =>
@@ -104,7 +102,6 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
     }
   }
 
-  // 3. Setup UI
   cleanupSubtitleSync();
   const overlay = createOverlay();
   applyState(overlay);
@@ -116,7 +113,6 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
     }
   });
 
-  // 5. Start Sync Loop
   const video = document.querySelector(
     "video.html5-main-video"
   ) as HTMLVideoElement;
