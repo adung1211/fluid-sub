@@ -12,6 +12,7 @@
         background: #202020;
         color: #e0e0e0;
         user-select: none;
+        min-height: 200px; /* Ensure height for loader */
       }
       header {
         display: flex;
@@ -21,90 +22,73 @@
         padding-bottom: 12px;
         margin-bottom: 16px;
       }
-      h2 {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 600;
-      }
-      
-      /* Main Toggle Switch */
-      .switch {
-        position: relative;
-        display: inline-block;
-        width: 40px;
-        height: 20px;
-      }
+      h2 { margin: 0; font-size: 16px; font-weight: 600; }
+      h3 { font-size: 13px; color: #aaa; margin: 20px 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+
+      /* Toggle Switch */
+      .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
       .switch input { opacity: 0; width: 0; height: 0; }
-      .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background-color: #555;
-        transition: .4s;
-        border-radius: 34px;
-      }
-      .slider:before {
-        position: absolute;
-        content: "";
-        height: 14px;
-        width: 14px;
-        left: 3px;
-        bottom: 3px;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-      }
+      .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 34px; }
+      .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
       input:checked + .slider { background-color: #4CAF50; }
       input:checked + .slider:before { transform: translateX(20px); }
 
-      /* Controls */
-      .controls-container {
-        opacity: 1;
-        transition: opacity 0.3s;
+      /* Views */
+      .view-section { display: none; }
+      .view-section.active { display: block; }
+
+      /* Loading Animation */
+      .loader-container {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 40px 0; text-align: center;
       }
-      .controls-container.disabled {
-        opacity: 0.4;
-        pointer-events: none;
+      .spinner {
+        border: 4px solid #333; border-top: 4px solid #4CAF50; border-radius: 50%;
+        width: 30px; height: 30px; animation: spin 1s linear infinite; margin-bottom: 12px;
       }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      .loader-text { font-size: 13px; color: #aaa; }
+
+      /* Error/Empty State */
+      .error-container {
+        text-align: center; padding: 30px 10px; background: #2a2a2a; border-radius: 8px; margin-top: 10px;
+      }
+      .error-icon { font-size: 24px; margin-bottom: 8px; display: block; }
+      .error-text { font-size: 13px; color: #e0e0e0; }
+      .error-sub { font-size: 11px; color: #888; margin-top: 4px; }
+
+      /* Main Controls */
       .control { margin-bottom: 16px; }
-      label {
-        display: flex;
-        justify-content: space-between;
-        font-size: 12px;
-        margin-bottom: 6px;
-        color: #aaa;
-      }
-      input[type="range"] {
-        width: 100%;
-        accent-color: #4CAF50;
-        cursor: pointer;
-        height: 4px;
-        background: #444;
-        border-radius: 2px;
-        appearance: none;
-      }
+      label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: #aaa; }
+      input[type="range"] { width: 100%; accent-color: #4CAF50; cursor: pointer; height: 4px; background: #444; border-radius: 2px; appearance: none; }
       .value { color: #fff; font-weight: bold; }
 
-      /* Debug Button */
-      .danger-btn {
-        margin-top: 24px;
-        width: 100%;
-        padding: 8px;
-        background: #cf4646;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 12px;
-        transition: background 0.2s;
+      /* Highlight Rows */
+      .highlight-list { display: flex; flex-direction: column; gap: 8px; }
+      .highlight-row { display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; padding: 6px 10px; border-radius: 6px; }
+      .highlight-info { display: flex; align-items: center; gap: 10px; flex: 1; }
+      .highlight-label { font-size: 13px; font-weight: 600; width: 45px; } 
+      .highlight-desc { font-size: 11px; color: #888; }
+      
+      input[type="color"] { -webkit-appearance: none; border: none; width: 24px; height: 24px; cursor: pointer; background: none; padding: 0; }
+      input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+      input[type="color"]::-webkit-color-swatch { border: 1px solid #555; border-radius: 4px; }
+      .cb-wrapper { display: flex; align-items: center; }
+      .cb-wrapper input { margin: 0; width: 16px; height: 16px; accent-color: #4CAF50; cursor: pointer; }
+
+      .primary-btn {
+        width: 100%; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px;
+        cursor: pointer; font-weight: 600; font-size: 14px; margin-top: 20px; transition: background 0.2s;
+        display: flex; justify-content: center; align-items: center; gap: 8px;
       }
-      .danger-btn:hover {
-        background: #b93b3b;
-      }
+      .primary-btn:hover { background: #43a047; }
+
+      .danger-btn { margin-top: 12px; width: 100%; padding: 8px; background: transparent; color: #cf4646; border: 1px solid #cf4646; border-radius: 4px; cursor: pointer; font-size: 11px; transition: background 0.2s; }
+      .danger-btn:hover { background: rgba(207, 70, 70, 0.1); }
     </style>
   </head>
   <body>
+    <!-- Always Visible Header -->
     <header>
       <h2>Enable Captions</h2>
       <label class="switch">
@@ -113,7 +97,25 @@
       </label>
     </header>
 
-    <div id="controls" class="controls-container">
+    <!-- 1. Loading View -->
+    <div id="loading-view" class="view-section">
+      <div class="loader-container">
+        <div class="spinner"></div>
+        <div class="loader-text">Analyzing Vocabulary...</div>
+      </div>
+    </div>
+
+    <!-- 2. Error/Not Found View -->
+    <div id="error-view" class="view-section">
+      <div class="error-container">
+        <span class="error-icon">🚫</span>
+        <div class="error-text">No Captions Found</div>
+        <div class="error-sub">This video might not have English subtitles or they are restricted.</div>
+      </div>
+    </div>
+
+    <!-- 3. Main Controls View -->
+    <div id="main-view" class="view-section">
       <div class="control">
         <label>Font Size: <span id="val-size" class="value">24px</span></label>
         <input type="range" id="fontSize" min="12" max="60" step="1">
@@ -128,6 +130,15 @@
         <label>Text Opacity: <span id="val-text" class="value">1.0</span></label>
         <input type="range" id="textOpacity" min="0.1" max="1" step="0.1">
       </div>
+
+      <h3>Vocabulary Highlights</h3>
+      <div class="highlight-list" id="highlight-list">
+        <!-- Generated by JS -->
+      </div>
+      
+      <button id="save-reload" class="primary-btn">
+        <span>💾 Save & Reload Page</span>
+      </button>
     </div>
 
     <button id="clear-cache" class="danger-btn">⚠️ Clear Cache (Debug)</button>

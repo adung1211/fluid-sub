@@ -1,14 +1,13 @@
 import { Subtitle } from "../interfaces/Subtitle";
 import { browser } from "wxt/browser";
-import { DEFAULT_SETTINGS, SETTINGS_KEY } from "./settings";
+import { DEFAULT_SETTINGS, SETTINGS_KEY, SubtitleSettings } from "./settings";
 import { createHighlighter, HighlighterFn } from "./highlighter";
 import { TokenData } from "./fetcher";
 
-let currentSettings = { ...DEFAULT_SETTINGS };
+let currentSettings: SubtitleSettings = { ...DEFAULT_SETTINGS };
 
 // ... (applyState and cleanupSubtitleSync remain unchanged) ...
 function applyState(overlay: HTMLElement | null) {
-  // 1. Manage Native Captions (Toggle)
   const styleId = "wxt-hide-native-subs";
   let styleTag = document.getElementById(styleId);
 
@@ -16,25 +15,18 @@ function applyState(overlay: HTMLElement | null) {
     if (!styleTag) {
       styleTag = document.createElement("style");
       styleTag.id = styleId;
-      styleTag.innerHTML = `
-        .ytp-caption-window-container, .caption-window {
-          display: none !important;
-        }
-      `;
+      styleTag.innerHTML = `.ytp-caption-window-container, .caption-window { display: none !important; }`;
       document.head.appendChild(styleTag);
     }
   } else {
     if (styleTag) styleTag.remove();
   }
 
-  // 2. Manage Overlay Appearance
   if (!overlay) return;
-
   if (!currentSettings.enabled) {
     overlay.style.display = "none";
     return;
   }
-
   Object.assign(overlay.style, {
     fontSize: `${currentSettings.fontSize}px`,
     backgroundColor: `rgba(0, 0, 0, ${currentSettings.bgOpacity})`,
@@ -51,7 +43,6 @@ export function cleanupSubtitleSync() {
     video.removeEventListener("timeupdate", (video as any).__wxt_sync_listener);
     delete (video as any).__wxt_sync_listener;
   }
-
   const overlay = document.getElementById("wxt-subtitle-layer");
   if (overlay) {
     overlay.style.display = "none";
@@ -63,10 +54,17 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
   // 1. Load Settings
   const stored = await browser.storage.local.get(SETTINGS_KEY);
   if (stored[SETTINGS_KEY]) {
-    currentSettings = stored[SETTINGS_KEY];
+    currentSettings = {
+      ...DEFAULT_SETTINGS,
+      ...stored[SETTINGS_KEY],
+      highlights: {
+        ...DEFAULT_SETTINGS.highlights,
+        ...stored[SETTINGS_KEY].highlights,
+      },
+    };
   }
 
-  // 2. Prepare Highlighters from Master List
+  // 2. Prepare Highlighters based on Settings
   const urlParams = new URLSearchParams(location.search);
   const videoId = urlParams.get("v");
   const highlighters: HighlighterFn[] = [];
@@ -77,18 +75,32 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
     const masterList = (storedData[rankCacheKey] as TokenData[]) || [];
 
     if (masterList.length > 0) {
-      // --- Filter 1: Unknown / Gibberish (Gray) ---
-      const unknownWords = masterList
-        .filter((t) => t.category === "unknown")
-        .map((t) => t.word);
+      // Loop through settings categories (A1..C2, unrank)
+      Object.keys(currentSettings.highlights).forEach((key) => {
+        const option = currentSettings.highlights[key];
 
-      if (unknownWords.length > 0) {
-        console.log(
-          `[WXT-DEBUG] Highlighting ${unknownWords.length} Unknown Words (Gray)`
-        );
-        // #9e9e9e is a neutral gray
-        highlighters.push(createHighlighter(unknownWords, "#9e9e9e"));
-      }
+        if (!option || !option.enabled) return;
+
+        let wordsToHighlight: string[] = [];
+
+        if (key === "unrank") {
+          wordsToHighlight = masterList
+            .filter((t) => t.category === "unknown")
+            .map((t) => t.word);
+        } else {
+          // Match CEFR level (case-insensitive)
+          wordsToHighlight = masterList
+            .filter(
+              (t) =>
+                t.category === "word" && t.cefr && t.cefr.toUpperCase() === key
+            )
+            .map((t) => t.word);
+        }
+
+        if (wordsToHighlight.length > 0) {
+          highlighters.push(createHighlighter(wordsToHighlight, option.color));
+        }
+      });
     }
   }
 
@@ -97,12 +109,10 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
   const overlay = createOverlay();
   applyState(overlay);
 
-  // 4. Listen for Settings Changes
   browser.storage.onChanged.addListener((changes, areaName) => {
     if (areaName === "local" && changes[SETTINGS_KEY]) {
       currentSettings = changes[SETTINGS_KEY].newValue;
-      const activeOverlay = document.getElementById("wxt-subtitle-layer");
-      applyState(activeOverlay);
+      applyState(document.getElementById("wxt-subtitle-layer"));
     }
   });
 
@@ -121,16 +131,14 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
     }
 
     const currentTime = video.currentTime;
-
     if (lastIndex !== -1) {
       const currentSub = subtitles[lastIndex];
       if (
         currentSub &&
         currentTime >= currentSub.start &&
         currentTime <= currentSub.end
-      ) {
+      )
         return;
-      }
     }
 
     const foundIndex = subtitles.findIndex(
@@ -146,7 +154,6 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
       }
 
       const htmlText = processedText.replace(/\n/g, "<br>");
-
       if (overlay.innerHTML !== htmlText) {
         overlay.innerHTML = htmlText;
         overlay.style.display = "block";
@@ -167,11 +174,9 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
 function createOverlay(): HTMLElement {
   const id = "wxt-subtitle-layer";
   let overlay = document.getElementById(id);
-
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.id = id;
-
     Object.assign(overlay.style, {
       position: "absolute",
       left: "50%",
@@ -192,15 +197,12 @@ function createOverlay(): HTMLElement {
       userSelect: "text",
       cursor: "text",
     });
-
     const player = document.getElementById("movie_player") || document.body;
     player.appendChild(overlay);
-
     const stopProp = (e: Event) => e.stopPropagation();
     overlay.addEventListener("mousedown", stopProp);
     overlay.addEventListener("click", stopProp);
     overlay.addEventListener("dblclick", stopProp);
-
     const updatePosition = () => {
       const controlsHidden = player.classList.contains("ytp-autohide");
       overlay!.style.bottom = controlsHidden ? "10%" : "20%";
@@ -209,6 +211,5 @@ function createOverlay(): HTMLElement {
     observer.observe(player, { attributes: true, attributeFilter: ["class"] });
     updatePosition();
   }
-
   return overlay;
 }
