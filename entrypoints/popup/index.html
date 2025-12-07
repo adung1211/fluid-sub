@@ -6,212 +6,165 @@
     <title>Subtitle Settings</title>
     <style>
       body {
-        width: 280px;
+        width: 320px;
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         padding: 16px;
         background: #202020;
         color: #e0e0e0;
         user-select: none;
-        min-height: 250px;
       }
+      /* ... (Previous Styles for header, switch, controls) ... */
       header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #444;
-        padding-bottom: 12px;
-        margin-bottom: 16px;
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid #444; padding-bottom: 12px; margin-bottom: 16px;
       }
       h2 { margin: 0; font-size: 16px; font-weight: 600; }
-      h3 { font-size: 13px; color: #aaa; margin: 20px 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px; }
-
-      /* Toggle Switch */
       .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
       .switch input { opacity: 0; width: 0; height: 0; }
-      .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 34px; }
-      .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+      .slider {
+        position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #555; transition: .4s; border-radius: 34px;
+      }
+      .slider:before {
+        position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+        background-color: white; transition: .4s; border-radius: 50%;
+      }
       input:checked + .slider { background-color: #4CAF50; }
       input:checked + .slider:before { transform: translateX(20px); }
 
-      /* Views */
-      .view-section { display: none; }
-      .view-section.active { display: block; }
-
-      /* Loader & Error */
-      .loader-container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; text-align: center; }
-      .spinner { border: 4px solid #333; border-top: 4px solid #4CAF50; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin-bottom: 12px; }
-      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-      .loader-text { font-size: 13px; color: #aaa; }
-      .error-container { text-align: center; padding: 30px 10px; background: #2a2a2a; border-radius: 8px; margin-top: 10px; }
-      .error-icon { font-size: 24px; margin-bottom: 8px; display: block; }
-      .error-text { font-size: 13px; color: #e0e0e0; }
-      .error-sub { font-size: 11px; color: #888; margin-top: 4px; }
-
-      /* Controls */
+      .controls-container { opacity: 1; transition: opacity 0.3s; }
+      .controls-container.disabled { opacity: 0.4; pointer-events: none; }
       .control { margin-bottom: 16px; }
-      label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: #aaa; }
+      label.range-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; color: #aaa; }
       input[type="range"] { width: 100%; accent-color: #4CAF50; cursor: pointer; height: 4px; background: #444; border-radius: 2px; appearance: none; }
       .value { color: #fff; font-weight: bold; }
 
-      /* Highlight Rows */
-      .highlight-list { display: flex; flex-direction: column; gap: 8px; }
-      .highlight-row { display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; padding: 6px 10px; border-radius: 6px; }
-      .highlight-info { display: flex; align-items: center; gap: 10px; flex: 1; }
+      /* Highlight Grid */
+      .highlight-section { margin-top: 20px; border-top: 1px solid #444; padding-top: 12px; }
+      .highlight-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #fff; }
       
-      /* Make label look clickable */
-      .highlight-label { 
-        font-size: 13px; font-weight: 600; width: 45px; 
-        cursor: pointer; text-decoration: underline; text-decoration-color: #555;
-        transition: color 0.2s;
+      .highlight-row {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 8px; font-size: 13px;
       }
-      .highlight-label:hover { color: #4CAF50; text-decoration-color: #4CAF50; }
+      .hl-left { display: flex; align-items: center; gap: 6px; flex: 1; }
+      .hl-count { color: #888; font-size: 11px; min-width: 24px; }
       
-      .highlight-desc { font-size: 11px; color: #888; }
-      
-      input[type="color"] { -webkit-appearance: none; border: none; width: 24px; height: 24px; cursor: pointer; background: none; padding: 0; }
+      /* View Button (Eye Icon) */
+      .view-btn {
+        background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 6px;
+        opacity: 0.6; transition: opacity 0.2s; margin-right: 4px;
+      }
+      .view-btn:hover { opacity: 1; transform: scale(1.1); }
+
+      input[type="color"] {
+        -webkit-appearance: none; border: none; width: 24px; height: 24px;
+        border-radius: 4px; padding: 0; background: none; cursor: pointer;
+      }
       input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
       input[type="color"]::-webkit-color-swatch { border: 1px solid #555; border-radius: 4px; }
-      .cb-wrapper { display: flex; align-items: center; }
-      .cb-wrapper input { margin: 0; width: 16px; height: 16px; accent-color: #4CAF50; cursor: pointer; }
 
-      .primary-btn { width: 100%; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; margin-top: 20px; transition: background 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
-      .primary-btn:hover { background: #43a047; }
-      .danger-btn { margin-top: 12px; width: 100%; padding: 8px; background: transparent; color: #cf4646; border: 1px solid #cf4646; border-radius: 4px; cursor: pointer; font-size: 11px; transition: background 0.2s; }
-      .danger-btn:hover { background: rgba(207, 70, 70, 0.1); }
+      .btn-group { margin-top: 24px; display: flex; flex-direction: column; gap: 8px; }
+      .action-btn { width: 100%; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+      .save-btn { background: #4CAF50; color: white; }
+      .save-btn:hover { background: #43a047; }
+      .danger-btn { background: #cf4646; color: white; }
+      .danger-btn:hover { background: #b93b3b; }
 
-      /* --- MODAL STYLES --- */
-      .modal {
-        display: none; /* Hidden by default */
-        position: fixed; 
-        z-index: 1000; 
-        left: 0; top: 0;
-        width: 100%; height: 100%; 
-        background-color: rgba(0,0,0,0.85); /* Black w/ opacity */
-        backdrop-filter: blur(2px);
+      /* --- NEW: Word List Overlay --- */
+      .overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: #202020; z-index: 100; padding: 16px;
+        display: none; flex-direction: column; box-sizing: border-box;
       }
-      .modal.show { display: block; }
-
-      .modal-content {
-        background-color: #202020;
-        margin: 10% auto; /* 10% from the top and centered */
-        padding: 0;
-        border: 1px solid #444;
-        width: 90%; 
-        height: 80%; /* Fixed height for scroll */
-        border-radius: 8px;
-        display: flex;
-        flex-direction: column;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-      }
-
-      .modal-header {
-        padding: 12px 16px;
-        border-bottom: 1px solid #333;
+      .overlay.active { display: flex; }
+      
+      .overlay-header {
         display: flex; justify-content: space-between; align-items: center;
-        background: #252525;
-        border-radius: 8px 8px 0 0;
+        border-bottom: 1px solid #444; padding-bottom: 8px; margin-bottom: 12px;
       }
-      .modal-title { font-weight: 600; font-size: 14px; color: #fff; }
-      .close-btn { color: #aaa; font-size: 24px; font-weight: bold; cursor: pointer; line-height: 20px; }
-      .close-btn:hover { color: #fff; }
-
-      .modal-body {
-        padding: 0;
-        overflow-y: auto; /* Scrollable area */
-        flex: 1;
-      }
+      .overlay-title { font-weight: bold; font-size: 14px; }
+      .close-btn { background: #444; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
       
-      /* Data Table */
-      .word-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
-      .word-table th { 
-        position: sticky; top: 0; background: #303030; color: #ccc; 
-        text-align: left; padding: 8px; font-weight: 600; z-index: 1; 
+      .word-list {
+        flex: 1; overflow-y: auto; font-size: 13px; color: #ddd; line-height: 1.6;
       }
-      .word-table td { 
-        padding: 8px; border-bottom: 1px solid #333; color: #ddd; 
-        word-wrap: break-word; /* Handle long words */
-      }
-      .word-table tr:hover { background: #2a2a2a; }
-      
-      .col-word { width: 45%; }
-      .col-time { width: 55%; color: #888; }
-      
-      .timestamp-tag {
-        display: inline-block; background: #333; padding: 2px 4px; border-radius: 3px;
-        margin-right: 4px; margin-bottom: 2px; font-size: 10px; color: #4CAF50;
-      }
+      .word-item { border-bottom: 1px solid #333; padding: 4px 0; }
+      .empty-msg { color: #666; font-style: italic; margin-top: 20px; text-align: center; }
     </style>
   </head>
   <body>
+    <div id="word-overlay" class="overlay">
+      <div class="overlay-header">
+        <span id="overlay-title" class="overlay-title">Word List</span>
+        <button id="close-overlay" class="close-btn">Close</button>
+      </div>
+      <div id="word-list-content" class="word-list"></div>
+    </div>
+
     <header>
-      <h2>Enable Captions</h2>
+      <h2>Enable Overlay</h2>
       <label class="switch">
         <input type="checkbox" id="enabled">
         <span class="slider"></span>
       </label>
     </header>
 
-    <div id="loading-view" class="view-section">
-      <div class="loader-container">
-        <div class="spinner"></div>
-        <div class="loader-text">Analyzing Vocabulary...</div>
-      </div>
-    </div>
-
-    <div id="error-view" class="view-section">
-      <div class="error-container">
-        <span class="error-icon">🚫</span>
-        <div class="error-text">No Captions Found</div>
-        <div class="error-sub">This video might not have English subtitles or they are restricted.</div>
-      </div>
-    </div>
-
-    <div id="main-view" class="view-section">
+    <div id="controls" class="controls-container">
       <div class="control">
-        <label>Font Size: <span id="val-size" class="value">24px</span></label>
+        <label class="range-label">Font Size: <span id="val-size" class="value">24px</span></label>
         <input type="range" id="fontSize" min="12" max="60" step="1">
       </div>
 
       <div class="control">
-        <label>Background Opacity: <span id="val-bg" class="value">0.6</span></label>
+        <label class="range-label">Bg Opacity: <span id="val-bg" class="value">0.6</span></label>
         <input type="range" id="bgOpacity" min="0" max="1" step="0.1">
       </div>
 
-      <div class="control">
-        <label>Text Opacity: <span id="val-text" class="value">1.0</span></label>
-        <input type="range" id="textOpacity" min="0.1" max="1" step="0.1">
-      </div>
-
-      <h3>Vocabulary Highlights</h3>
-      <div class="highlight-list" id="highlight-list">
+      <div class="highlight-section">
+        <div class="highlight-title">Vocabulary Levels</div>
+        
+        <div class="highlight-row">
+          <div class="hl-left">
+            <input type="checkbox" id="hl-B2-check">
+            <span>B2 <span id="hl-B2-count" class="hl-count">(-)</span></span>
+          </div>
+          <button id="btn-view-B2" class="view-btn" title="View Words">👁️</button>
+          <input type="color" id="hl-B2-color">
         </div>
-      
-      <button id="save-reload" class="primary-btn">
-        <span>💾 Save & Reload Page</span>
-      </button>
+
+        <div class="highlight-row">
+          <div class="hl-left">
+            <input type="checkbox" id="hl-C1-check">
+            <span>C1 <span id="hl-C1-count" class="hl-count">(-)</span></span>
+          </div>
+          <button id="btn-view-C1" class="view-btn" title="View Words">👁️</button>
+          <input type="color" id="hl-C1-color">
+        </div>
+
+        <div class="highlight-row">
+          <div class="hl-left">
+            <input type="checkbox" id="hl-C2-check">
+            <span>C2 <span id="hl-C2-count" class="hl-count">(-)</span></span>
+          </div>
+          <button id="btn-view-C2" class="view-btn" title="View Words">👁️</button>
+          <input type="color" id="hl-C2-color">
+        </div>
+
+        <div class="highlight-row">
+          <div class="hl-left">
+            <input type="checkbox" id="hl-norank-check">
+            <span>Unknown <span id="hl-norank-count" class="hl-count">(-)</span></span>
+          </div>
+          <button id="btn-view-norank" class="view-btn" title="View Words">👁️</button>
+          <input type="color" id="hl-norank-color">
+        </div>
+      </div>
     </div>
 
-    <button id="clear-cache" class="danger-btn">⚠️ Clear Cache (Debug)</button>
-
-    <div id="word-modal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <span id="modal-title" class="modal-title">Level Details</span>
-          <span id="modal-close" class="close-btn">&times;</span>
-        </div>
-        <div class="modal-body">
-          <table class="word-table">
-            <thead>
-              <tr>
-                <th class="col-word">Word</th>
-                <th class="col-time">Timestamps</th>
-              </tr>
-            </thead>
-            <tbody id="modal-table-body">
-              </tbody>
-          </table>
-        </div>
-      </div>
+    <div class="btn-group">
+      <button id="save-reload" class="action-btn save-btn">💾 Save & Reload Page</button>
+      <button id="clear-cache" class="action-btn danger-btn">⚠️ Reset / Clear Cache</button>
     </div>
 
     <script type="module" src="./index.ts"></script>

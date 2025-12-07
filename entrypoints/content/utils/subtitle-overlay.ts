@@ -81,7 +81,6 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
         let wordsToHighlight: string[] = [];
 
         if (key === "norank") {
-          // Fix: Only highlight 'norank', ignoring 'unknown' (gibberish)
           wordsToHighlight = masterList
             .filter((t) => t.category === "norank")
             .map((t) => t.word);

@@ -1,4 +1,4 @@
-// utils/settings.ts
+// entrypoints/content/utils/settings.ts
 export interface HighlightOption {
   enabled: boolean;
   color: string;
@@ -9,16 +9,7 @@ export interface SubtitleSettings {
   fontSize: number;
   bgOpacity: number;
   textOpacity: number;
-  highlights: {
-    [key: string]: HighlightOption;
-    A1: HighlightOption;
-    A2: HighlightOption;
-    B1: HighlightOption;
-    B2: HighlightOption;
-    C1: HighlightOption;
-    C2: HighlightOption;
-    norank: HighlightOption; // Changed from 'unrank'
-  };
+  highlights: Record<string, HighlightOption>;
 }
 
 export const DEFAULT_SETTINGS: SubtitleSettings = {
@@ -27,13 +18,11 @@ export const DEFAULT_SETTINGS: SubtitleSettings = {
   bgOpacity: 0.6,
   textOpacity: 1.0,
   highlights: {
-    A1: { enabled: false, color: "#8bc34a" },
-    A2: { enabled: false, color: "#4caf50" },
-    B1: { enabled: false, color: "#44ff00" },
-    B2: { enabled: true, color: "#00ff33" },
-    C1: { enabled: true, color: "#3700ff" },
-    C2: { enabled: true, color: "#fffb00" },
-    norank: { enabled: true, color: "#f44336" }, // Changed from 'unrank'
+    // Only high levels + unknown
+    B2: { enabled: true, color: "#66bb6a" },
+    C1: { enabled: true, color: "#ffa726" },
+    C2: { enabled: true, color: "#ef5350" },
+    norank: { enabled: true, color: "#9e9e9e" },
   },
 };
 
