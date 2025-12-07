@@ -1,3 +1,4 @@
+// entrypoints/content/utils/subtitle-overlay.ts
 import { Subtitle } from "../interfaces/Subtitle";
 import { browser } from "wxt/browser";
 import { DEFAULT_SETTINGS, SETTINGS_KEY, SubtitleSettings } from "./settings";
@@ -78,24 +79,26 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
 
         if (!option || !option.enabled) return;
 
-        let wordsToHighlight: string[] = [];
+        // Change: store full TokenData objects instead of just strings
+        let wordsToHighlight: TokenData[] = [];
 
         if (key === "norank") {
-          wordsToHighlight = masterList
-            .filter((t) => t.category === "norank")
-            .map((t) => t.word);
+          wordsToHighlight = masterList.filter((t) => t.category === "norank");
         } else {
           // CEFR levels
-          wordsToHighlight = masterList
-            .filter(
-              (t) =>
-                t.category === "word" && t.cefr && t.cefr.toUpperCase() === key
-            )
-            .map((t) => t.word);
+          wordsToHighlight = masterList.filter(
+            (t) =>
+              t.category === "word" && t.cefr && t.cefr.toUpperCase() === key
+          );
         }
 
         if (wordsToHighlight.length > 0) {
-          highlighters.push(createHighlighter(wordsToHighlight, option.color));
+          // Debugging: Print the list of words (with full metadata) to be highlighted
+          console.log(`[WXT-DEBUG] Highlighting for ${key}:`, wordsToHighlight);
+
+          // Map to strings here because createHighlighter expects string[]
+          const wordStrings = wordsToHighlight.map((t) => t.word);
+          highlighters.push(createHighlighter(wordStrings, option.color));
         }
       });
     }
