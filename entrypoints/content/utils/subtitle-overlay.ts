@@ -1,4 +1,3 @@
-// entrypoints/content/utils/subtitle-overlay.ts
 import { Subtitle } from "../interfaces/Subtitle";
 import { browser } from "wxt/browser";
 import { DEFAULT_SETTINGS, SETTINGS_KEY, SubtitleSettings } from "./settings";
@@ -101,6 +100,56 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
         // Accumulate for the overall debug/list
         wordsToHighlight.push(...filtered);
       });
+
+      // --- OPTIMIZED: Batch Translate using ROOT form ---
+      // 1. Identify words that need translation
+      const missingTranslationTokens = wordsToHighlight.filter(
+        (t) => !t.translation
+      );
+
+      if (missingTranslationTokens.length > 0) {
+        // 2. Get unique ROOTS to avoid duplicate requests and group variations
+        // (e.g. "running", "ran", "runs" -> all send "run" to translator)
+        const uniqueRoots = [
+          ...new Set(missingTranslationTokens.map((t) => t.root || t.word)),
+        ];
+
+        console.log(
+          `[WXT-DEBUG] Batch translating ${uniqueRoots.length} roots...`
+        );
+
+        try {
+          const response = await browser.runtime.sendMessage({
+            type: "TRANSLATE_BATCH",
+            texts: uniqueRoots,
+          });
+
+          if (response && response.success && response.data) {
+            const translationsMap = response.data;
+            let updatesCount = 0;
+
+            // 3. Apply translations to the master tokens (by reference)
+            wordsToHighlight.forEach((token) => {
+              // We match the translation against the token's root
+              const key = token.root || token.word;
+              if (!token.translation && translationsMap[key]) {
+                token.translation = translationsMap[key];
+                updatesCount++;
+              }
+            });
+
+            // 4. Save to storage ONLY if we actually updated something
+            if (updatesCount > 0) {
+              console.log(
+                `[WXT-DEBUG] Saving ${updatesCount} new translations to storage.`
+              );
+              await browser.storage.local.set({ [rankCacheKey]: masterList });
+            }
+          }
+        } catch (err) {
+          console.error("[WXT-DEBUG] Translation Error:", err);
+        }
+      }
     }
     // Debugging: Print the list of words (with full metadata) to be highlighted
     console.log(`[WXT-DEBUG] Highlight:`, wordsToHighlight);

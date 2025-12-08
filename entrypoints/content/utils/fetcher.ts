@@ -1,4 +1,3 @@
-// entrypoints/content/utils/fetcher.ts
 import { browser } from "wxt/browser";
 import { Subtitle } from "../interfaces/Subtitle";
 

@@ -1,4 +1,3 @@
-// entrypoints/background.ts
 import { browser } from "wxt/browser";
 
 export default defineBackground(() => {
@@ -59,32 +58,75 @@ export default defineBackground(() => {
       return true; // Keep channel open
     }
 
-    // --- NEW: Translation Handler ---
-    if (message.type === "TRANSLATE_TEXT") {
-      // Using the free 'gtx' endpoint for Google Translate
-      // sl=auto (source auto), tl=vi (target vietnamese), dt=t (return translation)
-      const text = message.text;
-      const apiUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(
-        text
-      )}`;
+    // --- NEW: Batch Translation Handler ---
+    if (message.type === "TRANSLATE_BATCH") {
+      const texts = message.texts as string[];
+      if (!texts || texts.length === 0) {
+        sendResponse({ success: true, data: {} });
+        return true;
+      }
 
-      fetch(apiUrl)
-        .then((res) => res.json())
-        .then((data) => {
-          // Response structure: [[["Translated Text", "Source Text", ...], ...], ...]
-          const translation =
-            data && data[0] && data[0][0] && data[0][0][0]
-              ? data[0][0][0]
-              : null;
+      // 1. Chunking to avoid hitting API payload limits
+      // 75 words per request is usually safe for the free endpoint URL length
+      const CHUNK_SIZE = 75;
+      const chunks: string[][] = [];
+      for (let i = 0; i < texts.length; i += CHUNK_SIZE) {
+        chunks.push(texts.slice(i, i + CHUNK_SIZE));
+      }
 
-          sendResponse({ success: true, translation });
+      const translateChunk = async (chunk: string[]) => {
+        // Join words with newline. The API treats newlines as segment breaks.
+        const q = chunk.join("\n");
+        const apiUrl =
+          "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t";
+
+        // Use POST with URLSearchParams for efficient large body sending
+        const body = new URLSearchParams();
+        body.append("q", q);
+
+        try {
+          const res = await fetch(apiUrl, {
+            method: "POST",
+            body: body,
+            // 'gtx' endpoint accepts form-urlencoded
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          });
+
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+          const data = await res.json();
+          // data[0] contains the segments: [[translated, source, ...], ...]
+          // We assume the order matches because we sent them joined by \n
+          return data[0].map((item: any) => item[0]);
+        } catch (e) {
+          console.error("Chunk translation error:", e);
+          // Return nulls for this chunk so indices align (or handle partially)
+          return chunk.map(() => null);
+        }
+      };
+
+      // 2. Process chunks
+      Promise.all(chunks.map(translateChunk))
+        .then((results) => {
+          const flatResults = results.flat();
+
+          // 3. Map back to original words
+          const translationMap: Record<string, string> = {};
+          texts.forEach((word, index) => {
+            if (flatResults[index]) {
+              // Trim to remove any accidental newlines returned by API
+              translationMap[word] = flatResults[index].trim();
+            }
+          });
+
+          sendResponse({ success: true, data: translationMap });
         })
         .catch((err) => {
-          console.error("[WXT-DEBUG] Translation Failed:", err);
+          console.error("Batch translate fatal error:", err);
           sendResponse({ success: false, error: err.message });
         });
 
-      return true; // Keep channel open
+      return true;
     }
   });
 });
