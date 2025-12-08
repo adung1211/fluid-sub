@@ -39,7 +39,7 @@ function getOrCreateWindow(initialHeight: number): HTMLElement {
       borderRadius: "16px",
       boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
       zIndex: "9999",
-      display: "none", // Will be set to flex by show functions
+      display: "none",
       flexDirection: "column",
       fontFamily: '"YouTube Noto", Roboto, Arial, sans-serif',
       color: "#fff",
@@ -63,15 +63,15 @@ function getOrCreateWindow(initialHeight: number): HTMLElement {
     header.innerHTML = `<div style="width: 32px; height: 4px; background: rgba(255,255,255,0.2); margin: 10px auto; border-radius: 2px;"></div>`;
     container.appendChild(header);
 
-    // --- 2. Loading Overlay (Hidden by default) ---
+    // --- 2. Loading Overlay ---
     const loadingOverlay = document.createElement("div");
     loadingOverlay.id = ID_LOADING_OVERLAY;
     Object.assign(loadingOverlay.style, {
       position: "absolute",
-      top: "24px", // Below header
+      top: "24px",
       left: "0",
       width: "100%",
-      height: "calc(100% - 40px)", // Subtract header + resize handle
+      height: "calc(100% - 40px)",
       display: "none",
       alignItems: "center",
       justifyContent: "center",
@@ -145,13 +145,19 @@ function getOrCreateWindow(initialHeight: number): HTMLElement {
       .wxt-vocab-meta { font-size: 10px; color: #888; margin-top: 6px; display:flex; justify-content:space-between; align-items:center; }
       .wxt-time-tag { background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; font-family: monospace; }
 
-      /* Spinner */
       .wxt-spinner {
         width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3);
         border-radius: 50%; border-top-color: #4CAF50;
         animation: wxt-spin 1s ease-in-out infinite;
       }
       @keyframes wxt-spin { to { transform: rotate(360deg); } }
+
+      /* Animation for error icon */
+      @keyframes wxt-shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-4px); }
+        75% { transform: translateX(4px); }
+      }
 
       /* Animations */
       @keyframes wxt-slide-in {
@@ -249,14 +255,10 @@ function setupResize(container: HTMLElement, handle: HTMLElement) {
   });
 }
 
-/**
- * Public: Controls the loading overlay state.
- */
 export function setFloatingWindowLoading(isLoading: boolean) {
   const container = document.getElementById(ID_FLOATING_WINDOW);
-  if (!container) return; // Not created yet, ignore
+  if (!container) return;
 
-  // Ensure window is visible (user said "always exist")
   if (container.style.display === "none" || container.style.opacity === "0") {
     container.style.display = "flex";
     requestAnimationFrame(() => (container.style.opacity = "1"));
@@ -269,8 +271,44 @@ export function setFloatingWindowLoading(isLoading: boolean) {
 }
 
 /**
- * Public: Clears all items from the window.
+ * Shows an error message in the floating window.
+ * Updated to be text-only with small font.
  */
+export function showFloatingErrorMessage(message: string) {
+  const container = document.getElementById(ID_FLOATING_WINDOW);
+  if (!container) return;
+
+  // Ensure visible
+  if (container.style.display === "none" || container.style.opacity === "0") {
+    container.style.display = "flex";
+    requestAnimationFrame(() => (container.style.opacity = "1"));
+  }
+
+  // Hide loader
+  const loader = document.getElementById(ID_LOADING_OVERLAY);
+  if (loader) loader.style.display = "none";
+
+  const contentArea = container.querySelector(`#${ID_FLOATING_WINDOW}-content`);
+  if (contentArea) {
+    contentArea.innerHTML = `
+      <div style="
+        height: 100%; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center; 
+        text-align: center; 
+        color: #aaa; 
+        padding: 20px;
+        opacity: 0;
+        animation: wxt-slide-in 0.3s forwards;
+      ">
+        <div style="font-size: 12px; line-height: 1.4;">${message}</div>
+      </div>
+    `;
+  }
+}
+
 export function clearFloatingWindow() {
   const container = document.getElementById(ID_FLOATING_WINDOW);
   if (!container) return;
@@ -280,9 +318,6 @@ export function clearFloatingWindow() {
   }
 }
 
-/**
- * Public: Ensures the window is visible (used on init).
- */
 export async function initFloatingWindow() {
   const stored = await browser.storage.local.get(SETTINGS_KEY);
   const settings =
@@ -364,6 +399,13 @@ export function updateFloatingWindow(
       }
     }
   });
+
+  if (
+    displayItems.length > 0 &&
+    !contentArea.querySelector(".wxt-vocab-item")
+  ) {
+    contentArea.innerHTML = "";
+  }
 
   displayItems.forEach((item) => {
     let el = contentArea.querySelector(
