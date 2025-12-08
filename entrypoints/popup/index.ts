@@ -27,6 +27,10 @@ async function init() {
     fontSize: getCheck("fontSize"),
     bgOpacity: getCheck("bgOpacity"),
 
+    // New Floating Window Inputs
+    floatingEnabled: getCheck("floatingEnabled"),
+    floatingTime: getCheck("floatingTime"),
+
     // Rows (Check, Color, Count, ViewBtn)
     B2: {
       check: getCheck("hl-B2-check"),
@@ -67,6 +71,11 @@ async function init() {
   els.enabled.checked = settings.enabled;
   els.fontSize.value = String(settings.fontSize);
   els.bgOpacity.value = String(settings.bgOpacity);
+
+  // Apply Floating Window Settings
+  els.floatingEnabled.checked = settings.floatingWindowEnabled ?? true;
+  els.floatingTime.value = String(settings.floatingTimeWindow ?? 10);
+  setText("val-floating-time", `${els.floatingTime.value}s`);
 
   const applyHighlightUI = (key: string, ui: any) => {
     if (settings.highlights && settings.highlights[key]) {
@@ -169,6 +178,9 @@ async function init() {
       enabled: els.enabled.checked,
       fontSize: Number(els.fontSize.value),
       bgOpacity: Number(els.bgOpacity.value),
+      // Save new settings
+      floatingWindowEnabled: els.floatingEnabled.checked,
+      floatingTimeWindow: Number(els.floatingTime.value),
       highlights: {
         ...currentHighlights,
         B2: { enabled: els.B2.check.checked, color: els.B2.color.value },
@@ -198,6 +210,14 @@ async function init() {
 
   els.fontSize.addEventListener("input", () => saveSettings(false));
   els.bgOpacity.addEventListener("input", () => saveSettings(false));
+
+  // New Event Listeners
+  els.floatingEnabled.addEventListener("change", () => saveSettings(false));
+  els.floatingTime.addEventListener("input", () => {
+    setText("val-floating-time", `${els.floatingTime.value}s`);
+    saveSettings(false);
+  });
+
   els.enabled.addEventListener("change", () => saveSettings(false));
   els.btnSave.addEventListener("click", () => saveSettings(true));
 

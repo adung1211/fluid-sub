@@ -3,6 +3,7 @@ import { browser } from "wxt/browser";
 import { DEFAULT_SETTINGS, SETTINGS_KEY, SubtitleSettings } from "./settings";
 import { createHighlighter, HighlighterFn } from "./highlighter";
 import { TokenData } from "./fetcher";
+import { updateFloatingWindow } from "./floating-window";
 
 let currentSettings: SubtitleSettings = { ...DEFAULT_SETTINGS };
 
@@ -47,6 +48,9 @@ export function cleanupSubtitleSync() {
     overlay.style.display = "none";
     overlay.innerHTML = "";
   }
+  // Also hide floating window on cleanup
+  const floatWin = document.getElementById("wxt-floating-vocab-window");
+  if (floatWin) floatWin.style.display = "none";
 }
 
 export async function startSubtitleSync(subtitles: Subtitle[]) {
@@ -66,13 +70,13 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
   const videoId = urlParams.get("v");
   const highlighters: HighlighterFn[] = [];
 
+  // Define wordsToHighlight here so it's accessible to onTimeUpdate closure
+  let wordsToHighlight: TokenData[] = [];
+
   if (videoId) {
     const rankCacheKey = `vocab_ranked_${videoId}`;
     const storedData = await browser.storage.local.get(rankCacheKey);
     const masterList = (storedData[rankCacheKey] as TokenData[]) || [];
-
-    // Change: store full TokenData objects instead of just strings
-    let wordsToHighlight: TokenData[] = [];
 
     if (masterList.length > 0) {
       // Loop through categories (A1..C2, norank)
@@ -97,11 +101,11 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
         const wordStrings = filtered.map((t) => t.word);
         highlighters.push(createHighlighter(wordStrings, option.color));
 
-        // Accumulate for the overall debug/list
+        // Accumulate for the overall debug/list AND floating window
         wordsToHighlight.push(...filtered);
       });
 
-      // --- OPTIMIZED: Batch Translate using ROOT form ---
+      // --- OPTIMIZED: Batch Translation using ROOT form ---
       // 1. Identify words that need translation
       const missingTranslationTokens = wordsToHighlight.filter(
         (t) => !t.translation
@@ -109,7 +113,6 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
 
       if (missingTranslationTokens.length > 0) {
         // 2. Get unique ROOTS to avoid duplicate requests and group variations
-        // (e.g. "running", "ran", "runs" -> all send "run" to translator)
         const uniqueRoots = [
           ...new Set(missingTranslationTokens.map((t) => t.root || t.word)),
         ];
@@ -163,6 +166,18 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
     if (areaName === "local" && changes[SETTINGS_KEY]) {
       currentSettings = changes[SETTINGS_KEY].newValue;
       applyState(document.getElementById("wxt-subtitle-layer"));
+
+      // Update floating window immediately on setting change (e.g. toggle off)
+      const videoEl = document.querySelector(
+        "video.html5-main-video"
+      ) as HTMLVideoElement;
+      if (videoEl) {
+        updateFloatingWindow(
+          wordsToHighlight,
+          videoEl.currentTime,
+          currentSettings
+        );
+      }
     }
   });
 
@@ -174,12 +189,17 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
   let lastIndex = -1;
 
   const onTimeUpdate = () => {
+    const currentTime = video.currentTime;
+
+    // --- Update Floating Window ---
+    // We do this every frame check to ensure sync
+    updateFloatingWindow(wordsToHighlight, currentTime, currentSettings);
+
     if (!currentSettings.enabled) {
       if (overlay.style.display !== "none") overlay.style.display = "none";
       return;
     }
 
-    const currentTime = video.currentTime;
     if (lastIndex !== -1) {
       const currentSub = subtitles[lastIndex];
       if (

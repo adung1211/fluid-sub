@@ -9,6 +9,10 @@ export interface SubtitleSettings {
   fontSize: number;
   bgOpacity: number;
   textOpacity: number;
+  // --- New Settings ---
+  floatingWindowEnabled: boolean;
+  floatingTimeWindow: number; // The "X" in seconds (e.g., 10s)
+  // --------------------
   highlights: Record<string, HighlightOption>;
 }
 
@@ -17,6 +21,10 @@ export const DEFAULT_SETTINGS: SubtitleSettings = {
   fontSize: 16,
   bgOpacity: 0.6,
   textOpacity: 1.0,
+  // --- Defaults ---
+  floatingWindowEnabled: true,
+  floatingTimeWindow: 10,
+  // ----------------
   highlights: {
     // Only high levels + unknown
     B2: { enabled: true, color: "#66bb6a" },
