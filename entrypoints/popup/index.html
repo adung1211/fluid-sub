@@ -13,7 +13,7 @@
         color: #e0e0e0;
         user-select: none;
       }
-      /* ... (Previous Styles) ... */
+      /* ... (Existing Styles) ... */
       header {
         display: flex; justify-content: space-between; align-items: center;
         border-bottom: 1px solid #444; padding-bottom: 12px; margin-bottom: 16px;
@@ -39,7 +39,6 @@
       input[type="range"] { width: 100%; accent-color: #4CAF50; cursor: pointer; height: 4px; background: #444; border-radius: 2px; appearance: none; }
       .value { color: #fff; font-weight: bold; }
 
-      /* Highlight Grid */
       .highlight-section { margin-top: 20px; border-top: 1px solid #444; padding-top: 12px; }
       .highlight-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #fff; }
       
@@ -50,7 +49,6 @@
       .hl-left { display: flex; align-items: center; gap: 6px; flex: 1; }
       .hl-count { color: #888; font-size: 11px; min-width: 24px; }
       
-      /* View Button (Eye Icon) */
       .view-btn {
         background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 6px;
         opacity: 0.6; transition: opacity 0.2s; margin-right: 4px;
@@ -70,6 +68,8 @@
       .save-btn:hover { background: #43a047; }
       .danger-btn { background: #cf4646; color: white; }
       .danger-btn:hover { background: #b93b3b; }
+      .secondary-btn { background: #333; color: #ddd; border: 1px solid #444; }
+      .secondary-btn:hover { background: #444; color: #fff; }
 
       /* --- Word List Overlay --- */
       .overlay {
@@ -89,7 +89,15 @@
       .word-list {
         flex: 1; overflow-y: auto; font-size: 13px; color: #ddd; line-height: 1.6;
       }
-      .word-item { border-bottom: 1px solid #333; padding: 4px 0; }
+      .word-item { 
+        border-bottom: 1px solid #333; padding: 6px 0; 
+        display: flex; justify-content: space-between; align-items: center;
+      }
+      .word-remove-btn {
+        background: transparent; border: 1px solid #555; color: #aaa;
+        border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer;
+      }
+      .word-remove-btn:hover { border-color: #cf4646; color: #cf4646; }
       .empty-msg { color: #666; font-style: italic; margin-top: 20px; text-align: center; }
     </style>
   </head>
@@ -176,6 +184,7 @@
     </div>
 
     <div class="btn-group">
+      <button id="btn-manage-known" class="action-btn secondary-btn">Manage Known Words</button>
       <button id="save-reload" class="action-btn save-btn">💾 Save & Reload Page</button>
       <button id="clear-cache" class="action-btn danger-btn">⚠️ Reset / Clear Cache</button>
     </div>

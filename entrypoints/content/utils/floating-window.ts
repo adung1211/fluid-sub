@@ -2,7 +2,6 @@
 import { TokenData } from "./fetcher";
 import { SubtitleSettings, SETTINGS_KEY, DEFAULT_SETTINGS } from "./settings";
 import { browser } from "wxt/browser";
-// IMPORT THE NEW POPUP FUNCTION
 import { showWordDetail } from "./word-detail";
 
 const ID_FLOATING_WINDOW = "wxt-floating-vocab-window";
@@ -17,9 +16,9 @@ interface DisplayItem {
   uniqueKey: string;
 }
 
-/**
- * Creates or retrieves the floating window DOM element with drag capabilities.
- */
+// ... (getOrCreateWindow, setupDrag, setupResize, setFloatingWindowLoading, showFloatingErrorMessage, clearFloatingWindow, initFloatingWindow stay the same)
+
+// HELPER: Keep the window creation functions as they were ...
 function getOrCreateWindow(initialHeight: number): HTMLElement {
   let container = document.getElementById(ID_FLOATING_WINDOW);
   if (!container) {
@@ -131,7 +130,7 @@ function getOrCreateWindow(initialHeight: number): HTMLElement {
         display: flex; flex-direction: column; position: relative;
         transform: translateZ(0);
         transition: all 0.4s ease;
-        cursor: pointer; /* ADDED CURSOR POINTER */
+        cursor: pointer;
       }
       .wxt-vocab-item:hover { background: rgba(255,255,255,0.1); opacity: 1 !important; filter: none !important; }
       .wxt-vocab-item.active-word {
@@ -155,14 +154,6 @@ function getOrCreateWindow(initialHeight: number): HTMLElement {
       }
       @keyframes wxt-spin { to { transform: rotate(360deg); } }
 
-      /* Animation for error icon */
-      @keyframes wxt-shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-4px); }
-        75% { transform: translateX(4px); }
-      }
-
-      /* Animations */
       @keyframes wxt-slide-in {
         from { opacity: 0; transform: translateY(10px) scale(0.95); max-height: 0; margin-bottom: 0; padding: 0 10px; border-width: 0; }
         to { opacity: 1; transform: translateY(0) scale(1); max-height: 100px; margin-bottom: 8px; padding: 10px; border-width: 2px; }
@@ -273,10 +264,6 @@ export function setFloatingWindowLoading(isLoading: boolean) {
   }
 }
 
-/**
- * Shows an error message in the floating window.
- * Updated to be text-only with small font.
- */
 export function showFloatingErrorMessage(message: string) {
   const container = document.getElementById(ID_FLOATING_WINDOW);
   if (!container) return;
@@ -358,6 +345,7 @@ export function updateFloatingWindow(
     requestAnimationFrame(() => (container.style.opacity = "1"));
   }
 
+  // 1. Identify which words SHOULD be visible based on time
   const startWindow = currentTime - settings.floatingTimeWindow;
   const endWindow = currentTime + settings.floatingTimeWindow;
   const displayItems: DisplayItem[] = [];
@@ -378,36 +366,62 @@ export function updateFloatingWindow(
 
   displayItems.sort((a, b) => a.start - b.start);
 
-  const activeKeys = new Set<string>();
-  const passedKeys = new Set<string>();
-
-  for (const item of displayItems) {
-    if (currentTime >= item.start && currentTime <= item.end) {
-      activeKeys.add(item.uniqueKey);
-    } else if (currentTime > item.end) {
-      passedKeys.add(item.uniqueKey);
-    }
-  }
-
   const activeKeysSet = new Set(displayItems.map((i) => i.uniqueKey));
 
+  // 2. NEW: Build a set of ALL valid keys from the current source list (allTokens)
+  // This allows us to check if a word currently in the DOM still "exists" in our known universe.
+  // If it's missing from this set, it means the user marked it as known (removed it).
+  const allValidKeysSet = new Set<string>();
+  allTokens.forEach((token) => {
+    token.timestamps.forEach((seg) => {
+      allValidKeysSet.add(`${token.word}-${seg.start}`);
+    });
+  });
+
+  // 3. Remove/Animate Out Old Elements
   Array.from(contentArea.children).forEach((child) => {
     const el = child as HTMLElement;
     const key = el.dataset.key;
+
+    // If the element is not in the active set (needs to be hidden)
     if (key && !activeKeysSet.has(key)) {
-      if (!el.classList.contains("exiting")) {
-        el.classList.remove("entering");
-        el.classList.add("exiting");
-        el.addEventListener("animationend", () => el.remove(), { once: true });
+      // LOGIC:
+      // If key is in allValidKeysSet -> It's a valid word, just passed the time window -> ANIMATE OUT
+      // If key is NOT in allValidKeysSet -> It was removed from the list (marked known) -> REMOVE INSTANTLY
+
+      if (allValidKeysSet.has(key)) {
+        if (!el.classList.contains("exiting")) {
+          el.classList.remove("entering");
+          el.classList.add("exiting");
+          el.addEventListener("animationend", () => el.remove(), {
+            once: true,
+          });
+        }
+      } else {
+        // Instant removal for known words or category changes
+        el.remove();
       }
     }
   });
 
+  // 4. Add New Elements or Update Existing
   if (
     displayItems.length > 0 &&
     !contentArea.querySelector(".wxt-vocab-item")
   ) {
     contentArea.innerHTML = "";
+  }
+
+  // Active Keys vs Passed Keys (grayed out)
+  const activeTimeKeys = new Set<string>();
+  const passedTimeKeys = new Set<string>();
+
+  for (const item of displayItems) {
+    if (currentTime >= item.start && currentTime <= item.end) {
+      activeTimeKeys.add(item.uniqueKey);
+    } else if (currentTime > item.end) {
+      passedTimeKeys.add(item.uniqueKey);
+    }
   }
 
   displayItems.forEach((item) => {
@@ -431,10 +445,12 @@ export function updateFloatingWindow(
         contentArea.appendChild(el);
       }
     } else {
+      // If re-entering from exiting state
       if (el.classList.contains("exiting")) {
         el.classList.remove("exiting");
         el.classList.add("entering");
       }
+      // Update translation if it came in late
       const transEl = el.querySelector(".wxt-vocab-trans");
       if (
         transEl &&
@@ -445,12 +461,12 @@ export function updateFloatingWindow(
       }
     }
 
-    if (activeKeys.has(item.uniqueKey)) {
+    if (activeTimeKeys.has(item.uniqueKey)) {
       el.classList.add("active-word");
       el.classList.remove("passed");
     } else {
       el.classList.remove("active-word");
-      if (passedKeys.has(item.uniqueKey)) {
+      if (passedTimeKeys.has(item.uniqueKey)) {
         el.classList.add("passed");
       } else {
         el.classList.remove("passed");
@@ -493,11 +509,8 @@ function createVocabItem(
         </div>
     `;
 
-  // --- ADDED CLICK LISTENER FOR POPUP ---
   div.addEventListener("click", (e) => {
-    // Prevent event bubbling if needed, but usually clicking the item is the intent
     e.stopPropagation();
-    // Use the root form if available for better dictionary lookups, fallback to word
     const searchWord = t.root || t.word;
     showWordDetail(searchWord, div);
   });

@@ -12,7 +12,7 @@ export interface SubtitleSettings {
   // --- New Settings ---
   floatingWindowEnabled: boolean;
   floatingTimeWindow: number;
-  floatingWindowHeight: number; // <--- ADDED: Persist height
+  floatingWindowHeight: number;
   // --------------------
   highlights: Record<string, HighlightOption>;
 }
@@ -25,7 +25,7 @@ export const DEFAULT_SETTINGS: SubtitleSettings = {
   // --- Defaults ---
   floatingWindowEnabled: true,
   floatingTimeWindow: 10,
-  floatingWindowHeight: 350, // <--- ADDED: Default height
+  floatingWindowHeight: 350,
   // ----------------
   highlights: {
     // Only high levels + unknown
@@ -37,3 +37,4 @@ export const DEFAULT_SETTINGS: SubtitleSettings = {
 };
 
 export const SETTINGS_KEY = "wxt_subtitle_settings";
+export const KNOWN_WORDS_KEY = "wxt_known_words";

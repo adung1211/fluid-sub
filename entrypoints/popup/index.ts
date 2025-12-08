@@ -4,6 +4,7 @@ import {
   DEFAULT_SETTINGS,
   SETTINGS_KEY,
   SubtitleSettings,
+  KNOWN_WORDS_KEY,
 } from "../content/utils/settings";
 import { TokenData } from "../content/utils/fetcher";
 
@@ -27,11 +28,9 @@ async function init() {
     fontSize: getCheck("fontSize"),
     bgOpacity: getCheck("bgOpacity"),
 
-    // New Floating Window Inputs
     floatingEnabled: getCheck("floatingEnabled"),
     floatingTime: getCheck("floatingTime"),
 
-    // Rows (Check, Color, Count, ViewBtn)
     B2: {
       check: getCheck("hl-B2-check"),
       color: getColor("hl-B2-color"),
@@ -57,10 +56,10 @@ async function init() {
       view: getBtn("btn-view-norank"),
     },
 
+    btnManageKnown: getBtn("btn-manage-known"),
     btnSave: getBtn("save-reload"),
     btnClear: getBtn("clear-cache"),
 
-    // Overlay
     overlay: document.getElementById("word-overlay")!,
     overlayTitle: document.getElementById("overlay-title")!,
     overlayContent: document.getElementById("word-list-content")!,
@@ -72,7 +71,6 @@ async function init() {
   els.fontSize.value = String(settings.fontSize);
   els.bgOpacity.value = String(settings.bgOpacity);
 
-  // Apply Floating Window Settings
   els.floatingEnabled.checked = settings.floatingWindowEnabled ?? true;
   els.floatingTime.value = String(settings.floatingTimeWindow ?? 10);
   setText("val-floating-time", `${els.floatingTime.value}s`);
@@ -90,7 +88,7 @@ async function init() {
 
   updateUIState(settings);
 
-  // 2. Fetch Words for Counts & View List
+  // 2. Fetch Words for Counts
   let masterList: TokenData[] = [];
   try {
     const tabs = await browser.tabs.query({
@@ -109,9 +107,18 @@ async function init() {
         const data = await browser.storage.local.get(cacheKey);
         masterList = (data[cacheKey] as TokenData[]) || [];
 
-        // Update Counts
+        // Exclude known words from count?
+        // Logic implies we should probably show raw counts here, OR counts minus known.
+        // Let's do counts minus known for consistency.
+        const knownData = await browser.storage.local.get(KNOWN_WORDS_KEY);
+        const knownSet = new Set(
+          (knownData[KNOWN_WORDS_KEY] as string[]) || []
+        );
+
         const counts = { B2: 0, C1: 0, C2: 0, norank: 0 };
         masterList.forEach((t) => {
+          if (knownSet.has(t.root || t.word)) return;
+
           if (t.category === "norank") counts.norank++;
           else if (t.category === "word" && t.cefr) {
             const lvl = t.cefr.toUpperCase();
@@ -130,46 +137,88 @@ async function init() {
     console.error("Error loading cache", e);
   }
 
-  // 3. View Logic
-  const openWordList = (label: string, filterFn: (t: TokenData) => boolean) => {
-    els.overlayTitle.textContent = `${label} Words`;
+  // 3. View Logic (General & Known)
+  const openWordList = (
+    label: string,
+    items: { text: string; isRemovable?: boolean }[]
+  ) => {
+    els.overlayTitle.textContent = label;
     els.overlayContent.innerHTML = "";
 
-    const words = masterList.filter(filterFn).map((t) => t.word);
-
-    if (words.length === 0) {
-      els.overlayContent.innerHTML = `<div class="empty-msg">No words found for this level.</div>`;
+    if (items.length === 0) {
+      els.overlayContent.innerHTML = `<div class="empty-msg">No words found.</div>`;
     } else {
-      // Sort alphabetically
-      words.sort();
-      words.forEach((w) => {
+      items.sort((a, b) => a.text.localeCompare(b.text));
+      items.forEach((item) => {
         const div = document.createElement("div");
         div.className = "word-item";
-        div.textContent = w;
+
+        const span = document.createElement("span");
+        span.textContent = item.text;
+        div.appendChild(span);
+
+        if (item.isRemovable) {
+          const btn = document.createElement("button");
+          btn.className = "word-remove-btn";
+          btn.textContent = "Remove";
+          btn.onclick = async () => {
+            // Remove from known words
+            const data = await browser.storage.local.get(KNOWN_WORDS_KEY);
+            let list = (data[KNOWN_WORDS_KEY] as string[]) || [];
+            list = list.filter((w) => w !== item.text);
+            await browser.storage.local.set({ [KNOWN_WORDS_KEY]: list });
+            // Remove from UI
+            div.remove();
+          };
+          div.appendChild(btn);
+        }
+
         els.overlayContent.appendChild(div);
       });
     }
     els.overlay.classList.add("active");
   };
 
+  const openCategoryList = async (
+    label: string,
+    filterFn: (t: TokenData) => boolean
+  ) => {
+    // We need to filter known words out of this view too
+    const knownData = await browser.storage.local.get(KNOWN_WORDS_KEY);
+    const knownSet = new Set((knownData[KNOWN_WORDS_KEY] as string[]) || []);
+
+    const words = masterList
+      .filter((t) => filterFn(t) && !knownSet.has(t.root || t.word))
+      .map((t) => ({ text: t.word, isRemovable: false }));
+
+    openWordList(label, words);
+  };
+
   els.B2.view.addEventListener("click", () =>
-    openWordList("B2 (Intermediate)", (t) => t.cefr === "B2")
+    openCategoryList("B2 Words", (t) => t.cefr === "B2")
   );
   els.C1.view.addEventListener("click", () =>
-    openWordList("C1 (Advanced)", (t) => t.cefr === "C1")
+    openCategoryList("C1 Words", (t) => t.cefr === "C1")
   );
   els.C2.view.addEventListener("click", () =>
-    openWordList("C2 (Mastery)", (t) => t.cefr === "C2")
+    openCategoryList("C2 Words", (t) => t.cefr === "C2")
   );
   els.norank.view.addEventListener("click", () =>
-    openWordList("Unknown / Rare", (t) => t.category === "norank")
+    openCategoryList("Unknown Words", (t) => t.category === "norank")
   );
+
+  els.btnManageKnown.addEventListener("click", async () => {
+    const data = await browser.storage.local.get(KNOWN_WORDS_KEY);
+    const list = (data[KNOWN_WORDS_KEY] as string[]) || [];
+    const items = list.map((w) => ({ text: w, isRemovable: true }));
+    openWordList("Known Words (Hidden)", items);
+  });
 
   els.overlayClose.addEventListener("click", () => {
     els.overlay.classList.remove("active");
   });
 
-  // 4. Save & Reload Logic
+  // 4. Save & Reload
   const saveSettings = async (shouldReload = false) => {
     const currentHighlights =
       settings.highlights || DEFAULT_SETTINGS.highlights;
@@ -178,7 +227,6 @@ async function init() {
       enabled: els.enabled.checked,
       fontSize: Number(els.fontSize.value),
       bgOpacity: Number(els.bgOpacity.value),
-      // Save new settings
       floatingWindowEnabled: els.floatingEnabled.checked,
       floatingTimeWindow: Number(els.floatingTime.value),
       highlights: {
@@ -210,8 +258,6 @@ async function init() {
 
   els.fontSize.addEventListener("input", () => saveSettings(false));
   els.bgOpacity.addEventListener("input", () => saveSettings(false));
-
-  // New Event Listeners
   els.floatingEnabled.addEventListener("change", () => saveSettings(false));
   els.floatingTime.addEventListener("input", () => {
     setText("val-floating-time", `${els.floatingTime.value}s`);
