@@ -29,10 +29,10 @@ export const DEFAULT_SETTINGS: SubtitleSettings = {
   // ----------------
   highlights: {
     // Only high levels + unknown
-    B2: { enabled: true, color: "#66bb6a" },
-    C1: { enabled: true, color: "#ffa726" },
-    C2: { enabled: true, color: "#ef5350" },
-    norank: { enabled: true, color: "#9e9e9e" },
+    B2: { enabled: true, color: "#00ff0d" },
+    C1: { enabled: true, color: "#ff9900" },
+    C2: { enabled: true, color: "#ffe600" },
+    norank: { enabled: true, color: "#ff0000" },
   },
 };
 
