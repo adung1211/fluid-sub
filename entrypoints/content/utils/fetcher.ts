@@ -11,18 +11,6 @@ export interface TokenData {
 }
 
 /**
- * Helper to nicely print the vocabulary list to the console for debugging
- */
-function printTopWords(words: TokenData[]) {
-  // ... (keeping existing logging logic unchanged) ...
-  console.groupCollapsed(
-    `[WXT-DEBUG] 📊 Vocabulary List (${words.length} items)`
-  );
-  console.log("Raw Data:", words);
-  console.groupEnd();
-}
-
-/**
  * Fetches parsed subtitles and their difficulty ranking.
  * Manages 'status' in storage so Popup can react in real-time.
  */
@@ -90,7 +78,6 @@ export async function fetchSubtitles(
     if (rankResponse && rankResponse.success) {
       const masterList = rankResponse.data as TokenData[];
       console.log(`[WXT-DEBUG] Received ${masterList.length} tokens.`);
-      // printTopWords(masterList);
 
       // Save data AND status 'success' atomically-ish
       await browser.storage.local.set({

@@ -72,6 +72,9 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
     const storedData = await browser.storage.local.get(rankCacheKey);
     const masterList = (storedData[rankCacheKey] as TokenData[]) || [];
 
+    // Change: store full TokenData objects instead of just strings
+    let wordsToHighlight: TokenData[] = [];
+
     if (masterList.length > 0) {
       // Loop through categories (A1..C2, norank)
       Object.keys(currentSettings.highlights).forEach((key) => {
@@ -79,29 +82,28 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
 
         if (!option || !option.enabled) return;
 
-        // Change: store full TokenData objects instead of just strings
-        let wordsToHighlight: TokenData[] = [];
+        const filtered =
+          key === "norank"
+            ? masterList.filter((t) => t.category === "norank")
+            : masterList.filter(
+                (t) =>
+                  t.category === "word" &&
+                  t.cefr &&
+                  t.cefr.toUpperCase() === key
+              );
 
-        if (key === "norank") {
-          wordsToHighlight = masterList.filter((t) => t.category === "norank");
-        } else {
-          // CEFR levels
-          wordsToHighlight = masterList.filter(
-            (t) =>
-              t.category === "word" && t.cefr && t.cefr.toUpperCase() === key
-          );
-        }
+        if (filtered.length === 0) return;
 
-        if (wordsToHighlight.length > 0) {
-          // Debugging: Print the list of words (with full metadata) to be highlighted
-          console.log(`[WXT-DEBUG] Highlighting for ${key}:`, wordsToHighlight);
+        // Create a highlighter for this category
+        const wordStrings = filtered.map((t) => t.word);
+        highlighters.push(createHighlighter(wordStrings, option.color));
 
-          // Map to strings here because createHighlighter expects string[]
-          const wordStrings = wordsToHighlight.map((t) => t.word);
-          highlighters.push(createHighlighter(wordStrings, option.color));
-        }
+        // Accumulate for the overall debug/list
+        wordsToHighlight.push(...filtered);
       });
     }
+    // Debugging: Print the list of words (with full metadata) to be highlighted
+    console.log(`[WXT-DEBUG] Highlight:`, wordsToHighlight);
   }
 
   cleanupSubtitleSync();
