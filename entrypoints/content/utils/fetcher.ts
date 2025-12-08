@@ -1,3 +1,4 @@
+// entrypoints/content/utils/fetcher.ts
 import { browser } from "wxt/browser";
 import { Subtitle } from "../interfaces/Subtitle";
 
@@ -8,6 +9,7 @@ export interface TokenData {
   root: string;
   cefr: string;
   timestamps: number[];
+  translation?: string; // <--- Added field for translation
 }
 
 /**
