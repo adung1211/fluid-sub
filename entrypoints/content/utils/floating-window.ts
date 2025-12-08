@@ -2,6 +2,8 @@
 import { TokenData } from "./fetcher";
 import { SubtitleSettings, SETTINGS_KEY, DEFAULT_SETTINGS } from "./settings";
 import { browser } from "wxt/browser";
+// IMPORT THE NEW POPUP FUNCTION
+import { showWordDetail } from "./word-detail";
 
 const ID_FLOATING_WINDOW = "wxt-floating-vocab-window";
 const ID_WINDOW_HEADER = "wxt-floating-header";
@@ -129,6 +131,7 @@ function getOrCreateWindow(initialHeight: number): HTMLElement {
         display: flex; flex-direction: column; position: relative;
         transform: translateZ(0);
         transition: all 0.4s ease;
+        cursor: pointer; /* ADDED CURSOR POINTER */
       }
       .wxt-vocab-item:hover { background: rgba(255,255,255,0.1); opacity: 1 !important; filter: none !important; }
       .wxt-vocab-item.active-word {
@@ -489,5 +492,15 @@ function createVocabItem(
             <span class="wxt-time-tag">${formatTime(item.start)}</span>
         </div>
     `;
+
+  // --- ADDED CLICK LISTENER FOR POPUP ---
+  div.addEventListener("click", (e) => {
+    // Prevent event bubbling if needed, but usually clicking the item is the intent
+    e.stopPropagation();
+    // Use the root form if available for better dictionary lookups, fallback to word
+    const searchWord = t.root || t.word;
+    showWordDetail(searchWord, div);
+  });
+
   return div;
 }
