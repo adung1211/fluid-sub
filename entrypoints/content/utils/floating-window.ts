@@ -59,6 +59,7 @@ function getOrCreateWindow(): HTMLElement {
       padding: "10px",
       flex: "1",
       scrollbarWidth: "thin",
+      minHeight: "40px", // Ensure it has some height even when empty so it doesn't look broken
     });
     container.appendChild(content);
 
@@ -184,23 +185,13 @@ export function updateFloatingWindow(
     token.timestamps.some((ts) => ts >= startWindow && ts <= endWindow)
   );
 
-  // Hide if empty
-  if (activeTokens.length === 0) {
-    container.style.opacity = "0";
-    setTimeout(() => {
-      // Only hide display if still opacity 0 (prevent flickering if data comes back fast)
-      if (container.style.opacity === "0") container.style.display = "none";
-    }, 200);
-    return;
+  // --- CHANGED: Always show container, even if empty ---
+  container.style.display = "flex";
+  if (container.style.opacity !== "1") {
+    requestAnimationFrame(() => (container.style.opacity = "1"));
   }
 
-  // Show Container
-  container.style.display = "flex";
-  // Small delay to allow display:flex to apply before opacity transition
-  requestAnimationFrame(() => (container.style.opacity = "1"));
-
   // 3. Sort Tokens (Stable Sort by Earliest Timestamp inside Window)
-  // This keeps the list jumping less than "closest distance"
   activeTokens.sort((a, b) => {
     const getFirstInWindow = (timestamps: number[]) =>
       timestamps.find((t) => t >= startWindow) || 0;
@@ -210,11 +201,9 @@ export function updateFloatingWindow(
   // 4. DOM Diffing & Animation Logic
 
   // Create a Set of keys for the NEW active tokens
-  // We use word+root as a unique key (timestamps can be tricky if multiple occur)
   const activeKeys = new Set(activeTokens.map((t) => getTokenKey(t)));
 
   // A. Mark EXITING items
-  // Iterate over current DOM children
   const existingChildren = Array.from(contentArea.children) as HTMLElement[];
   existingChildren.forEach((child) => {
     const key = child.dataset.key;
@@ -237,7 +226,7 @@ export function updateFloatingWindow(
   });
 
   // B. Add NEW ENTERING items or UPDATE existing
-  activeTokens.forEach((t, index) => {
+  activeTokens.forEach((t) => {
     const key = getTokenKey(t);
     let el = contentArea.querySelector(
       `.wxt-vocab-item[data-key="${key}"]`
@@ -248,33 +237,21 @@ export function updateFloatingWindow(
       el = createVocabItem(t, settings);
       el.dataset.key = key;
       el.classList.add("entering");
-
-      // Insert in roughly the correct position?
-      // For simplicity/performance in floating windows, appending often looks smoother
-      // than trying to insert-sort into a list of animating elements.
-      // However, we can append to bottom.
       contentArea.appendChild(el);
     } else {
-      // UPDATE EXISTING (If needed, e.g. translation loaded later)
-      // Removing 'exiting' class if it was about to die but came back
+      // UPDATE EXISTING
+      // Removing 'exiting' class if it was about to die but came back (scrolled back in time)
       if (el.classList.contains("exiting")) {
         el.classList.remove("exiting");
-        el.classList.add("entering"); // Re-trigger enter or just fade in?
+        el.classList.add("entering");
       }
 
-      // Check if translation updated (async fetch case)
+      // Check if translation updated
       const transEl = el.querySelector(".wxt-vocab-trans");
       if (transEl && t.translation && transEl.textContent !== t.translation) {
         transEl.textContent = t.translation;
       }
 
-      // Re-order?
-      // Moving elements in DOM while animating can be jerky.
-      // We usually let them stay in rendered order or simple append.
-      // For this specific use case, appending new words to the bottom is usually best natural flow.
-      // So we skip re-ordering existing nodes.
-
-      // Ensure it's visible
       el.style.display = "flex";
     }
   });
