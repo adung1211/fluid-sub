@@ -1,3 +1,4 @@
+// entrypoints/content/utils/fetcher.ts
 import { browser } from "wxt/browser";
 import { Subtitle } from "../interfaces/Subtitle";
 
@@ -7,8 +8,9 @@ export interface TokenData {
   category: "word" | "unknown" | "norank" | "norank_name";
   root: string;
   cefr: string;
-  timestamps: number[];
-  translation?: string; // <--- Added field for translation
+  // CHANGED: Timestamps are now segments with start/end for precise highlighting
+  timestamps: { start: number; end: number }[];
+  translation?: string;
 }
 
 /**

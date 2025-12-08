@@ -11,7 +11,8 @@ export interface SubtitleSettings {
   textOpacity: number;
   // --- New Settings ---
   floatingWindowEnabled: boolean;
-  floatingTimeWindow: number; // The "X" in seconds (e.g., 10s)
+  floatingTimeWindow: number;
+  floatingWindowHeight: number; // <--- ADDED: Persist height
   // --------------------
   highlights: Record<string, HighlightOption>;
 }
@@ -24,6 +25,7 @@ export const DEFAULT_SETTINGS: SubtitleSettings = {
   // --- Defaults ---
   floatingWindowEnabled: true,
   floatingTimeWindow: 10,
+  floatingWindowHeight: 350, // <--- ADDED: Default height
   // ----------------
   highlights: {
     // Only high levels + unknown
