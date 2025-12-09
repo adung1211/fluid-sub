@@ -526,7 +526,7 @@ function createVocabItem(
         <div class="wxt-vocab-word">${t.word}</div>
         <div class="wxt-vocab-trans">${t.translation || "..."}</div>
         <div class="wxt-vocab-meta">
-            <span>${t.cefr || "VR"}</span>
+            <span>${t.cefr || "NA"}</span>
             <span class="wxt-time-tag">${formatTime(item.start)}</span>
         </div>
     `;
