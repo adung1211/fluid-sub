@@ -57,7 +57,7 @@ async function init() {
     },
 
     btnManageKnown: getBtn("btn-manage-known"),
-    btnSave: getBtn("save-reload"),
+    // btnSave removed
     btnClear: getBtn("clear-cache"),
 
     overlay: document.getElementById("word-overlay")!,
@@ -107,9 +107,7 @@ async function init() {
         const data = await browser.storage.local.get(cacheKey);
         masterList = (data[cacheKey] as TokenData[]) || [];
 
-        // Exclude known words from count?
-        // Logic implies we should probably show raw counts here, OR counts minus known.
-        // Let's do counts minus known for consistency.
+        // Exclude known words from count
         const knownData = await browser.storage.local.get(KNOWN_WORDS_KEY);
         const knownSet = new Set(
           (knownData[KNOWN_WORDS_KEY] as string[]) || []
@@ -218,7 +216,7 @@ async function init() {
     els.overlay.classList.remove("active");
   });
 
-  // 4. Save & Reload
+  // 4. Save & Reload (Updated to Auto-Save)
   const saveSettings = async (shouldReload = false) => {
     const currentHighlights =
       settings.highlights || DEFAULT_SETTINGS.highlights;
@@ -256,6 +254,16 @@ async function init() {
     }
   };
 
+  // Add Auto-save listeners to Highlight Controls
+  const setupHighlightListeners = (ui: any) => {
+    ui.check.addEventListener("change", () => saveSettings(false));
+    ui.color.addEventListener("input", () => saveSettings(false));
+  };
+  setupHighlightListeners(els.B2);
+  setupHighlightListeners(els.C1);
+  setupHighlightListeners(els.C2);
+  setupHighlightListeners(els.norank);
+
   els.fontSize.addEventListener("input", () => saveSettings(false));
   els.bgOpacity.addEventListener("input", () => saveSettings(false));
   els.floatingEnabled.addEventListener("change", () => saveSettings(false));
@@ -265,7 +273,7 @@ async function init() {
   });
 
   els.enabled.addEventListener("change", () => saveSettings(false));
-  els.btnSave.addEventListener("click", () => saveSettings(true));
+  // els.btnSave listener removed
 
   els.btnClear.addEventListener("click", async () => {
     if (confirm("Clear cache?")) {

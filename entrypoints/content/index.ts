@@ -31,7 +31,7 @@ export default defineContentScript({
           currentVideoId = null;
           cleanupSubtitleSync();
           clearFloatingWindow();
-          setFloatingWindowLoading(false);
+          await setFloatingWindowLoading(false);
         }
         return;
       }
@@ -43,15 +43,17 @@ export default defineContentScript({
       currentVideoId = newVideoId;
       cleanupSubtitleSync();
       clearFloatingWindow();
-      setFloatingWindowLoading(true);
+      await setFloatingWindowLoading(true);
 
       const subtitles = await fetchSubtitles(newVideoId, videoUrl);
 
-      setFloatingWindowLoading(false);
+      await setFloatingWindowLoading(false);
 
       if (!subtitles || subtitles.length === 0) {
         // Trigger notification in floating window
-        showFloatingErrorMessage("No English subtitle found for this video");
+        await showFloatingErrorMessage(
+          "No English subtitle found for this video"
+        );
         return;
       }
 

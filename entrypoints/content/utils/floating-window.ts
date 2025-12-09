@@ -16,8 +16,6 @@ interface DisplayItem {
   uniqueKey: string;
 }
 
-// ... (getOrCreateWindow, setupDrag, setupResize, setFloatingWindowLoading, showFloatingErrorMessage, clearFloatingWindow, initFloatingWindow stay the same)
-
 // HELPER: Keep the window creation functions as they were ...
 function getOrCreateWindow(initialHeight: number): HTMLElement {
   let container = document.getElementById(ID_FLOATING_WINDOW);
@@ -249,13 +247,30 @@ function setupResize(container: HTMLElement, handle: HTMLElement) {
   });
 }
 
-export function setFloatingWindowLoading(isLoading: boolean) {
+export async function setFloatingWindowLoading(isLoading: boolean) {
   const container = document.getElementById(ID_FLOATING_WINDOW);
   if (!container) return;
 
-  if (container.style.display === "none" || container.style.opacity === "0") {
-    container.style.display = "flex";
-    requestAnimationFrame(() => (container.style.opacity = "1"));
+  // Check Settings First
+  const stored = await browser.storage.local.get(SETTINGS_KEY);
+  const settings =
+    (stored[SETTINGS_KEY] as SubtitleSettings) || DEFAULT_SETTINGS;
+
+  if (!settings.enabled || !settings.floatingWindowEnabled) {
+    // If disabled, ensure it is hidden
+    if (container.style.display !== "none") {
+      container.style.display = "none";
+      container.style.opacity = "0";
+    }
+    return;
+  }
+
+  // Only force show if we are actually loading (not when stopping loading)
+  if (isLoading) {
+    if (container.style.display === "none" || container.style.opacity === "0") {
+      container.style.display = "flex";
+      requestAnimationFrame(() => (container.style.opacity = "1"));
+    }
   }
 
   const loader = document.getElementById(ID_LOADING_OVERLAY);
@@ -264,7 +279,14 @@ export function setFloatingWindowLoading(isLoading: boolean) {
   }
 }
 
-export function showFloatingErrorMessage(message: string) {
+export async function showFloatingErrorMessage(message: string) {
+  // Check Settings First
+  const stored = await browser.storage.local.get(SETTINGS_KEY);
+  const settings =
+    (stored[SETTINGS_KEY] as SubtitleSettings) || DEFAULT_SETTINGS;
+
+  if (!settings.enabled || !settings.floatingWindowEnabled) return;
+
   const container = document.getElementById(ID_FLOATING_WINDOW);
   if (!container) return;
 
@@ -314,9 +336,9 @@ export async function initFloatingWindow() {
     (stored[SETTINGS_KEY] as SubtitleSettings) || DEFAULT_SETTINGS;
 
   if (settings.enabled && settings.floatingWindowEnabled) {
-    const container = getOrCreateWindow(settings.floatingWindowHeight || 350);
-    container.style.display = "flex";
-    requestAnimationFrame(() => (container.style.opacity = "1"));
+    // Just create the window structure, but do NOT force it to be visible immediately.
+    // It will be shown when setFloatingWindowLoading(true) or updateFloatingWindow is called.
+    getOrCreateWindow(settings.floatingWindowHeight || 350);
   }
 }
 
