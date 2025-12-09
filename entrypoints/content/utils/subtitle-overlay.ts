@@ -1,3 +1,4 @@
+// entrypoints/content/utils/subtitle-overlay.ts
 import { Subtitle } from "../interfaces/Subtitle";
 import { browser } from "wxt/browser";
 import {
@@ -5,6 +6,7 @@ import {
   SETTINGS_KEY,
   SubtitleSettings,
   KNOWN_WORDS_KEY,
+  LEVELS,
 } from "./settings";
 import { createHighlighter, HighlighterFn } from "./highlighter";
 import { TokenData } from "./fetcher";
@@ -98,39 +100,34 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
     const knownSet = new Set((knownData[KNOWN_WORDS_KEY] as string[]) || []);
 
     if (masterList.length > 0) {
-      // Loop through categories (A1..C2, norank)
-      Object.keys(currentSettings.highlights).forEach((key) => {
-        const option = currentSettings.highlights[key];
+      // --- REFACTORED LOOP ---
+      // Loop through our standardized LEVELS array (B2, C1, C2, C3)
+      LEVELS.forEach((levelKey) => {
+        const option = currentSettings.highlights[levelKey];
 
+        // 1. Check if this level is enabled in settings
         if (!option || !option.enabled) return;
 
-        // Filter by Category
-        const filteredByCategory =
-          key === "norank"
-            ? masterList.filter((t) => t.category === "norank")
-            : masterList.filter(
-                (t) =>
-                  t.category === "word" &&
-                  t.cefr &&
-                  t.cefr.toUpperCase() === key
-              );
-
-        // Filter by Known List
-        const filtered = filteredByCategory.filter(
-          (t) => !knownSet.has(t.root || t.word)
-        );
+        // 2. Filter words that match this level (cefr) AND are not known
+        // Since backend now sends "C3" for unranked, we just check t.cefr
+        const filtered = masterList.filter((t) => {
+          const isMatch = t.cefr && t.cefr.toUpperCase() === levelKey;
+          const isNotKnown = !knownSet.has(t.root || t.word);
+          return isMatch && isNotKnown;
+        });
 
         if (filtered.length === 0) return;
 
-        // Create a highlighter for this category
+        // 3. Create a highlighter for this category
         const wordStrings = filtered.map((t) => t.word);
         nextHighlighters.push(createHighlighter(wordStrings, option.color));
 
         // Accumulate for the floating window
         nextWordsToHighlight.push(...filtered);
       });
+      // -----------------------
 
-      // --- OPTIMIZED: Batch Translation using ROOT form ---
+      // --- Batch Translation using ROOT form ---
       // We check against our NEW local list 'nextWordsToHighlight'
       const missingTranslationTokens = nextWordsToHighlight.filter(
         (t) => !t.translation

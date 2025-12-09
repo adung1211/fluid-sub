@@ -1,4 +1,8 @@
 // entrypoints/content/utils/settings.ts
+
+// 1. Add "B1" to the start of the list
+export const LEVELS = ["B1", "B2", "C1", "C2", "C3"];
+
 export interface HighlightOption {
   enabled: boolean;
   color: string;
@@ -9,11 +13,9 @@ export interface SubtitleSettings {
   fontSize: number;
   bgOpacity: number;
   textOpacity: number;
-  // --- New Settings ---
   floatingWindowEnabled: boolean;
   floatingTimeWindow: number;
   floatingWindowHeight: number;
-  // --------------------
   highlights: Record<string, HighlightOption>;
 }
 
@@ -22,17 +24,16 @@ export const DEFAULT_SETTINGS: SubtitleSettings = {
   fontSize: 16,
   bgOpacity: 0.6,
   textOpacity: 1.0,
-  // --- Defaults ---
   floatingWindowEnabled: true,
   floatingTimeWindow: 10,
   floatingWindowHeight: 350,
-  // ----------------
   highlights: {
-    // Only high levels + unknown
-    B2: { enabled: true, color: "#00ff0d" },
+    // 2. Add B1 default config (Disabled by default, using a Blue color)
+    B1: { enabled: false, color: "#00ff0d" },
+    B2: { enabled: true, color: "#0091ff" },
     C1: { enabled: true, color: "#ff9900" },
     C2: { enabled: true, color: "#ffe600" },
-    norank: { enabled: true, color: "#ff0000" },
+    C3: { enabled: true, color: "#ff0000" },
   },
 };
 

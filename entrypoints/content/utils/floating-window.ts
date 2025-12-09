@@ -507,11 +507,10 @@ function createVocabItem(
 
   let badgeColor = "#999";
   const t = item.token;
-  if (t.category === "word" && t.cefr && settings.highlights[t.cefr]) {
+  if (t.cefr && settings.highlights[t.cefr]) {
     badgeColor = settings.highlights[t.cefr].color;
-  } else if (t.category === "norank" && settings.highlights.norank) {
-    badgeColor = settings.highlights.norank.color;
   }
+
   div.style.borderLeftColor = badgeColor;
   div.style.borderLeftWidth = "4px";
   div.style.borderLeftStyle = "solid";
