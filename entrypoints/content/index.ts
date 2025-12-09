@@ -1,5 +1,4 @@
 // entrypoints/content/index.ts
-import { browser } from "wxt/browser";
 import { fetchSubtitles } from "./utils/fetcher";
 import {
   startSubtitleSync,
@@ -11,11 +10,6 @@ import {
   clearFloatingWindow,
   showFloatingErrorMessage,
 } from "./utils/floating-window";
-import {
-  SETTINGS_KEY,
-  DEFAULT_SETTINGS,
-  SubtitleSettings,
-} from "./utils/settings";
 
 export default defineContentScript({
   matches: ["*://www.youtube.com/*"],
@@ -49,27 +43,15 @@ export default defineContentScript({
       currentVideoId = newVideoId;
       cleanupSubtitleSync();
       clearFloatingWindow();
-
-      // --- Fix: Check settings before showing loading screen ---
-      const stored = await browser.storage.local.get(SETTINGS_KEY);
-      const settings =
-        (stored[SETTINGS_KEY] as SubtitleSettings) || DEFAULT_SETTINGS;
-      const isFloatingEnabled =
-        settings.enabled && settings.floatingWindowEnabled;
-
-      if (isFloatingEnabled) {
-        setFloatingWindowLoading(true);
-      }
+      setFloatingWindowLoading(true);
 
       const subtitles = await fetchSubtitles(newVideoId, videoUrl);
 
       setFloatingWindowLoading(false);
 
       if (!subtitles || subtitles.length === 0) {
-        // Only show error if enabled
-        if (isFloatingEnabled) {
-          showFloatingErrorMessage("No English subtitle found for this video");
-        }
+        // Trigger notification in floating window
+        showFloatingErrorMessage("No English subtitle found for this video");
         return;
       }
 
