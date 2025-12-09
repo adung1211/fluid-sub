@@ -80,7 +80,7 @@ export async function fetchSubtitles(
 
     if (rankResponse && rankResponse.success) {
       const masterList = rankResponse.data as TokenData[];
-      console.log(`[WXT-DEBUG] Received ${masterList.length} tokens.`);
+      console.log(`[WXT-DEBUG] Words List:`, masterList);
 
       // Save data AND status 'success' atomically-ish
       await browser.storage.local.set({

@@ -1,12 +1,14 @@
 import { browser } from "wxt/browser";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL.replace(/\/$/, "");
+
 export default defineBackground(() => {
   console.log("[WXT-DEBUG] Background Proxy Ready.");
 
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // --- Existing GET Handler ---
     if (message.type === "FETCH_FROM_PYTHON") {
-      const apiUrl = `http://127.0.0.1:8000/get-subtitles?video_url=${encodeURIComponent(
+      const apiUrl = `${BACKEND_URL}/get-subtitles?video_url=${encodeURIComponent(
         message.videoUrl
       )}`;
 
@@ -31,7 +33,7 @@ export default defineBackground(() => {
 
     // --- Existing POST Handler for Ranking ---
     if (message.type === "RANK_VOCABULARY") {
-      const apiUrl = "http://127.0.0.1:8000/rank-vocabulary";
+      const apiUrl = `${BACKEND_URL}/rank-vocabulary`;
 
       console.log("[WXT-DEBUG] Background calling Python (POST):", apiUrl);
 
