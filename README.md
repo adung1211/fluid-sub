@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://i.imgur.com/eN0eUmw.jpeg" width="600" alt="FluidSub Banner" />
+  <img src="https://i.ibb.co/Xx8hYHnw/darktheme.png" width="650" alt="FluidSub Banner" />
   
   <br />
   
