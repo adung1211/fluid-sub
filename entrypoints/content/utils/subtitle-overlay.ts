@@ -8,7 +8,12 @@ import {
   KNOWN_WORDS_KEY,
   LEVELS,
 } from "./settings";
-import { createHighlighter, HighlighterFn } from "./highlighter";
+// UPDATE IMPORT:
+import {
+  createUnifiedHighlighter,
+  HighlighterFn,
+  HighlightConfig,
+} from "./highlighter";
 import { TokenData } from "./fetcher";
 import { updateFloatingWindow } from "./floating-window";
 
@@ -76,16 +81,16 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
   const urlParams = new URLSearchParams(location.search);
   const videoId = urlParams.get("v");
 
-  // Keep these valid at all times to prevent UI flicker
-  let highlighters: HighlighterFn[] = [];
+  // CHANGED: Use a single highlighter function instead of an array
+  let highlighter: HighlighterFn = (text) => text;
   let wordsToHighlight: TokenData[] = [];
 
   // Function to refresh highlight logic based on settings AND known words
   const refreshHighlights = async () => {
     if (!videoId) return;
 
-    // 1. Create temporary local arrays instead of clearing globals immediately
-    const nextHighlighters: HighlighterFn[] = [];
+    // 1. Prepare collection for new configs
+    const nextConfigs: HighlightConfig[] = [];
     const nextWordsToHighlight: TokenData[] = [];
 
     const rankCacheKey = `vocab_ranked_${videoId}`;
@@ -101,7 +106,6 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
 
     if (masterList.length > 0) {
       // --- REFACTORED LOOP ---
-      // Loop through our standardized LEVELS array (B2, C1, C2, NR)
       LEVELS.forEach((levelKey) => {
         const option = currentSettings.highlights[levelKey];
 
@@ -117,9 +121,9 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
 
         if (filtered.length === 0) return;
 
-        // 3. Create a highlighter for this category
+        // 3. Collect configuration for this level
         const wordStrings = filtered.map((t) => t.word);
-        nextHighlighters.push(createHighlighter(wordStrings, option.color));
+        nextConfigs.push({ words: wordStrings, color: option.color });
 
         // Accumulate for the floating window
         nextWordsToHighlight.push(...filtered);
@@ -174,8 +178,8 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
       }
     }
 
-    // 2. Atomically swap the globals with the fully prepared new lists
-    highlighters = nextHighlighters;
+    // 2. Create the unified highlighter
+    highlighter = createUnifiedHighlighter(nextConfigs);
     wordsToHighlight = nextWordsToHighlight;
 
     console.log(
@@ -261,9 +265,8 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
       lastIndex = foundIndex;
       let processedText = subtitles[foundIndex].text;
 
-      for (const highlight of highlighters) {
-        processedText = highlight(processedText);
-      }
+      // CHANGED: Call single unified highlighter
+      processedText = highlighter(processedText);
 
       const htmlText = processedText.replace(/\n/g, "<br>");
       if (overlay.innerHTML !== htmlText) {

@@ -2,7 +2,7 @@ import { defineConfig } from "wxt";
 
 export default defineConfig({
   manifest: {
-    name: "YouTube Hybrid Subtitle Installer",
+    name: "FluidSub",
     permissions: ["scripting", "storage"],
     host_permissions: [
       "*://www.youtube.com/*",
