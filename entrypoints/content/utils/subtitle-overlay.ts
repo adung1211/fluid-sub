@@ -101,7 +101,7 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
 
     if (masterList.length > 0) {
       // --- REFACTORED LOOP ---
-      // Loop through our standardized LEVELS array (B2, C1, C2, C3)
+      // Loop through our standardized LEVELS array (B2, C1, C2, NR)
       LEVELS.forEach((levelKey) => {
         const option = currentSettings.highlights[levelKey];
 
@@ -109,7 +109,6 @@ export async function startSubtitleSync(subtitles: Subtitle[]) {
         if (!option || !option.enabled) return;
 
         // 2. Filter words that match this level (cefr) AND are not known
-        // Since backend now sends "C3" for unranked, we just check t.cefr
         const filtered = masterList.filter((t) => {
           const isMatch = t.cefr && t.cefr.toUpperCase() === levelKey;
           const isNotKnown = !knownSet.has(t.root || t.word);

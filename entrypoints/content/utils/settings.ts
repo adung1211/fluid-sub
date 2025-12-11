@@ -1,7 +1,7 @@
 // entrypoints/content/utils/settings.ts
 
 // 1. Add "B1" to the start of the list
-export const LEVELS = ["B1", "B2", "C1", "C2", "C3"];
+export const LEVELS = ["B1", "B2", "C1", "C2", "NR"];
 
 export interface HighlightOption {
   enabled: boolean;
@@ -33,7 +33,7 @@ export const DEFAULT_SETTINGS: SubtitleSettings = {
     B2: { enabled: true, color: "#0091ff" },
     C1: { enabled: true, color: "#ff9900" },
     C2: { enabled: true, color: "#ffe600" },
-    C3: { enabled: true, color: "#ff0000" },
+    NR: { enabled: true, color: "#ff0000" },
   },
 };
 

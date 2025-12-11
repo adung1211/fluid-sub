@@ -237,8 +237,21 @@ async function init() {
   els.enabled.addEventListener("change", () => saveSettings(false));
 
   els.btnClear.addEventListener("click", async () => {
-    if (confirm("Clear cache?")) {
-      await browser.storage.local.clear();
+    if (confirm("Clear temporary subtitles data?")) {
+      // Fetch all storage keys
+      const allData = await browser.storage.local.get(null);
+      const allKeys = Object.keys(allData);
+
+      // Filter keys: Remove everything EXCEPT settings and known words
+      const keysToRemove = allKeys.filter(
+        (key) => key !== SETTINGS_KEY && key !== KNOWN_WORDS_KEY
+      );
+
+      if (keysToRemove.length > 0) {
+        await browser.storage.local.remove(keysToRemove);
+      }
+
+      // Reload to refresh state
       await saveSettings(true);
     }
   });
