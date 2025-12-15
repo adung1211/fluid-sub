@@ -98,7 +98,7 @@ class FloatingWindowController {
     this.state.settings = settings;
     // Only show if we have tokens or if previously visible (e.g. keeping window open even if empty segments?)
     // Actually, `update` is called continuously. We want to ensure it's visible if enabled.
-    if (settings.enabled && settings.floatingWindowEnabled) {
+    if (settings.enabled) {
         this.state.visible = true;
     } else {
         this.state.visible = false;

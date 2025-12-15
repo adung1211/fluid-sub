@@ -29,7 +29,9 @@ async function init() {
     bgOpacity: getCheck("bgOpacity"),
     floatingTimeBack: getCheck("floatingTimeBack"),
     floatingTimeFront: getCheck("floatingTimeFront"),
-    targetLanguage: document.getElementById("targetLanguage") as HTMLSelectElement,
+    targetLanguage: document.getElementById(
+      "targetLanguage"
+    ) as HTMLSelectElement,
     btnManageKnown: getBtn("btn-manage-known"),
     btnClear: getBtn("clear-cache"),
     overlay: document.getElementById("word-overlay")!,
@@ -208,7 +210,6 @@ async function init() {
       enabled: true,
       fontSize: Number(els.fontSize.value),
       bgOpacity: Number(els.bgOpacity.value),
-      floatingWindowEnabled: true,
       floatingTimeWindowBack: Number(els.floatingTimeBack.value),
       floatingTimeWindowFront: Number(els.floatingTimeFront.value),
       targetLanguage: els.targetLanguage.value,

@@ -13,7 +13,6 @@ export interface SubtitleSettings {
   fontSize: number;
   bgOpacity: number;
   textOpacity: number;
-  floatingWindowEnabled: boolean;
   floatingTimeWindowBack: number;
   floatingTimeWindowFront: number;
   floatingWindowHeight: number;
@@ -26,7 +25,6 @@ export const DEFAULT_SETTINGS: SubtitleSettings = {
   fontSize: 16,
   bgOpacity: 0.6,
   textOpacity: 1.0,
-  floatingWindowEnabled: true,
   floatingTimeWindowBack: 3,
   floatingTimeWindowFront: 5,
   floatingWindowHeight: 350,

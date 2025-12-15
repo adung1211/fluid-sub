@@ -184,7 +184,7 @@ export const FloatingWindow: React.FC<Props> = ({
     }
   }, []);
 
-  if (!settings.enabled || !settings.floatingWindowEnabled) return null;
+  if (!settings.enabled) return null;
 
   // --- Minimized View ---
   if (isMinimized) {
