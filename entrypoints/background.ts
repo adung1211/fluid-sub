@@ -79,8 +79,9 @@ export default defineBackground(() => {
       const translateChunk = async (chunk: string[]) => {
         // Join words with newline. The API treats newlines as segment breaks.
         const q = chunk.join("\n");
+        const targetLang = (message.targetLang as string) || "vi";
         const apiUrl =
-          "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t";
+          `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t`;
 
         // Use POST with URLSearchParams for efficient large body sending
         const body = new URLSearchParams();

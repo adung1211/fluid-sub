@@ -29,6 +29,7 @@ async function init() {
     bgOpacity: getCheck("bgOpacity"),
     floatingTimeBack: getCheck("floatingTimeBack"),
     floatingTimeFront: getCheck("floatingTimeFront"),
+    targetLanguage: document.getElementById("targetLanguage") as HTMLSelectElement,
     btnManageKnown: getBtn("btn-manage-known"),
     btnClear: getBtn("clear-cache"),
     overlay: document.getElementById("word-overlay")!,
@@ -44,6 +45,7 @@ async function init() {
   setText("val-floating-back", `${els.floatingTimeBack.value}s`);
   els.floatingTimeFront.value = String(settings.floatingTimeWindowFront ?? 15);
   setText("val-floating-front", `${els.floatingTimeFront.value}s`);
+  els.targetLanguage.value = settings.targetLanguage || "vi";
 
   // 2. DYNAMIC Highlight Controls Setup
   // We store references to controls so we can update counts later
@@ -209,6 +211,7 @@ async function init() {
       floatingWindowEnabled: true,
       floatingTimeWindowBack: Number(els.floatingTimeBack.value),
       floatingTimeWindowFront: Number(els.floatingTimeFront.value),
+      targetLanguage: els.targetLanguage.value,
       highlights: newHighlights,
     };
 
@@ -227,6 +230,17 @@ async function init() {
     }
   };
 
+  const clearSubtitleCache = async () => {
+    const allData = await browser.storage.local.get(null);
+    const allKeys = Object.keys(allData);
+    const keysToRemove = allKeys.filter(
+      (key) => key !== SETTINGS_KEY && key !== KNOWN_WORDS_KEY
+    );
+    if (keysToRemove.length > 0) {
+      await browser.storage.local.remove(keysToRemove);
+    }
+  };
+
   els.fontSize.addEventListener("input", () => saveSettings(false));
   els.bgOpacity.addEventListener("input", () => saveSettings(false));
   els.floatingTimeBack.addEventListener("input", () => {
@@ -237,22 +251,14 @@ async function init() {
     setText("val-floating-front", `${els.floatingTimeFront.value}s`);
     saveSettings(false);
   });
+  els.targetLanguage.addEventListener("change", async () => {
+    await clearSubtitleCache();
+    saveSettings(true);
+  });
 
   els.btnClear.addEventListener("click", async () => {
     if (confirm("Clear temporary subtitles data?")) {
-      // Fetch all storage keys
-      const allData = await browser.storage.local.get(null);
-      const allKeys = Object.keys(allData);
-
-      // Filter keys: Remove everything EXCEPT settings and known words
-      const keysToRemove = allKeys.filter(
-        (key) => key !== SETTINGS_KEY && key !== KNOWN_WORDS_KEY
-      );
-
-      if (keysToRemove.length > 0) {
-        await browser.storage.local.remove(keysToRemove);
-      }
-
+      await clearSubtitleCache();
       // Reload to refresh state
       await saveSettings(true);
     }

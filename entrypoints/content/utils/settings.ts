@@ -17,6 +17,7 @@ export interface SubtitleSettings {
   floatingTimeWindowBack: number;
   floatingTimeWindowFront: number;
   floatingWindowHeight: number;
+  targetLanguage: string;
   highlights: Record<string, HighlightOption>;
 }
 
@@ -29,6 +30,7 @@ export const DEFAULT_SETTINGS: SubtitleSettings = {
   floatingTimeWindowBack: 3,
   floatingTimeWindowFront: 5,
   floatingWindowHeight: 350,
+  targetLanguage: "vi",
   highlights: {
     // 2. Add B1 default config (Disabled by default, using a Blue color)
     B1: { enabled: false, color: "#00ff0d" },

@@ -263,6 +263,7 @@ class SubtitleOverlayController {
           const response = await browser.runtime.sendMessage({
             type: "TRANSLATE_BATCH",
             texts: uniqueRoots,
+            targetLang: this.state.settings.targetLanguage || "vi",
           });
           if (response && response.success && response.data) {
              let updatesCount = 0;
