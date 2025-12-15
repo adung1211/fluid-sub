@@ -33,6 +33,10 @@ async function init() {
       "targetLanguage"
     ) as HTMLSelectElement,
     btnManageKnown: getBtn("btn-manage-known"),
+    btnImportOverlay: getBtn("btn-import-overlay"),
+    btnExportOverlay: getBtn("btn-export-overlay"),
+    overlayActions: document.getElementById("overlay-actions")!,
+    fileInput: document.getElementById("import-file") as HTMLInputElement,
     btnClear: getBtn("clear-cache"),
     overlay: document.getElementById("word-overlay")!,
     overlayTitle: document.getElementById("overlay-title")!,
@@ -48,6 +52,86 @@ async function init() {
   els.floatingTimeFront.value = String(settings.floatingTimeWindowFront ?? 15);
   setText("val-floating-front", `${els.floatingTimeFront.value}s`);
   els.targetLanguage.value = settings.targetLanguage || "vi";
+
+  // --- Import / Export Logic (Overlay) ---
+  
+  els.btnExportOverlay.addEventListener("click", async () => {
+    try {
+      const data = await browser.storage.local.get(KNOWN_WORDS_KEY);
+      const list = (data[KNOWN_WORDS_KEY] as string[]) || [];
+      if (list.length === 0) {
+        alert("No known words to export.");
+        return;
+      }
+      const blob = new Blob([list.join("\n")], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "known_words.txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Export failed:", e);
+      alert("Failed to export words.");
+    }
+  });
+
+  els.btnImportOverlay.addEventListener("click", () => {
+    els.fileInput.click();
+  });
+
+  els.fileInput.addEventListener("change", async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        if (!text) return;
+
+        const newWords = text
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0);
+
+        if (newWords.length === 0) {
+          alert("No valid words found in file.");
+          return;
+        }
+
+        const data = await browser.storage.local.get(KNOWN_WORDS_KEY);
+        const currentList = (data[KNOWN_WORDS_KEY] as string[]) || [];
+        const uniqueSet = new Set(currentList);
+        
+        let addedCount = 0;
+        newWords.forEach((w) => {
+          if (!uniqueSet.has(w)) {
+            uniqueSet.add(w);
+            addedCount++;
+          }
+        });
+
+        await browser.storage.local.set({
+          [KNOWN_WORDS_KEY]: Array.from(uniqueSet),
+        });
+
+        alert(`Successfully imported ${addedCount} new words!`);
+        
+        // Refresh the currently open list
+        els.btnManageKnown.click();
+
+      } catch (err) {
+        console.error("Import failed:", err);
+        alert("Failed to import words.");
+      } finally {
+        els.fileInput.value = ""; // Reset
+      }
+    };
+    reader.readAsText(file);
+  });
 
   // 2. DYNAMIC Highlight Controls Setup
   // We store references to controls so we can update counts later
@@ -131,10 +215,12 @@ async function init() {
   // 4. View Logic (Shared)
   const openWordList = (
     label: string,
-    items: { text: string; isRemovable?: boolean }[]
+    items: { text: string; isRemovable?: boolean }[],
+    showActions: boolean
   ) => {
     els.overlayTitle.textContent = label;
     els.overlayContent.innerHTML = "";
+    els.overlayActions.style.display = showActions ? "flex" : "none";
 
     if (items.length === 0) {
       els.overlayContent.innerHTML = `<div class="empty-msg">No words found.</div>`;
@@ -177,14 +263,14 @@ async function init() {
       .filter((t) => filterFn(t) && !knownSet.has(t.root || t.word))
       .map((t) => ({ text: t.word, isRemovable: false }));
 
-    openWordList(label, words);
+    openWordList(label, words, false);
   };
 
   els.btnManageKnown.addEventListener("click", async () => {
     const data = await browser.storage.local.get(KNOWN_WORDS_KEY);
     const list = (data[KNOWN_WORDS_KEY] as string[]) || [];
     const items = list.map((w) => ({ text: w, isRemovable: true }));
-    openWordList("Known Words (Hidden)", items);
+    openWordList("Known Words (Hidden)", items, true);
   });
 
   els.overlayClose.addEventListener("click", () => {

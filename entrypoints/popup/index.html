@@ -146,8 +146,14 @@
   <body>
     <div id="word-overlay" class="overlay">
       <div class="overlay-header">
-        <span id="overlay-title" class="overlay-title">Word List</span>
-        <button id="close-overlay" class="close-btn">Close</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="overlay-title" class="overlay-title">Word List</span>
+            <div id="overlay-actions" style="display: none; gap: 4px;">
+                <button id="btn-import-overlay" class="word-remove-btn">Import</button>
+                <button id="btn-export-overlay" class="word-remove-btn">Export</button>
+            </div>
+        </div>
+        <button id="close-overlay" class="close-btn">✕</button>
       </div>
       <div id="word-list-content" class="word-list"></div>
     </div>
@@ -258,6 +264,7 @@
       </div>
       <button id="btn-manage-known" class="dic-btn">Manage</button>
     </div>
+    <input type="file" id="import-file" style="display: none;" accept=".txt">
 
     <div class="btn-group">
       <button id="clear-cache" class="action-btn danger-btn">⚠️ Clear Subtitles Data</button>
