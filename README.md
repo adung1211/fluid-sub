@@ -26,7 +26,7 @@
 
 <br />
 
-## 🚀 Why FluidSub?
+## 🚀 Why FluidSub ?
 
 Standard YouTube subtitles are functional but often distracting for learners. FluidSub bridges the gap between watching and understanding by replacing the traditional "pause-and-lookup" habit with a seamless interface.
 
@@ -35,6 +35,8 @@ Standard YouTube subtitles are functional but often distracting for learners. Fl
 * **CEFR Level Highlighting:** Automatically detects and highlights vocabulary based on proficiency levels (A1, A2, B1, etc.).
 * **Smart Anticipation:** Visualizes upcoming complex vocabulary before it appears on screen.
 ![Animation](https://github.com/user-attachments/assets/710a7d9d-1725-4622-a76f-d56f2e97b794)
+
+<br />
 
 ## Architecture
 
@@ -54,13 +56,20 @@ Ranker task involves ranking and filtering out unrelated words using multiple lo
 </div>
 <br/>
 
+## Download
+1. Download and unzip extension from the [Releases](https://github.com/adung1211/fluidsub-ext/releases).
+3. Go to your browser's extensions page.
+4. Enable **Developer Mode**.
+5. Click **Load Unpacked** and select the unzipped folder.
+
 ## Further Plan
 
 I am still working on some features which will be added in the future:
 
-- Personal vocabulary with learning and reminding new words. Import/Export personal data.
+- Inline dictionary tooltip.
+- Personal vocabulary list.
+- Import/Export personal data.
 - Richer database using Machine Learning.
-- Inline dictionary tooltip (similar to Google Translate).
 
 
 <p align="center">
