@@ -207,8 +207,8 @@ export const FloatingWindow: React.FC<Props> = ({
           // Minimized Height: 48px -> Center at y+24.
           // Offset Y: 16 - 24 = -8.
           top: position.y - 8,
-          width: "48px",
-          height: "48px",
+          width: "28px",
+          height: "28px",
           backgroundColor: "rgba(20, 20, 20, 0.95)",
           backdropFilter: "blur(8px)",
           border: "1px solid rgba(255,255,255,0.2)",
@@ -226,7 +226,7 @@ export const FloatingWindow: React.FC<Props> = ({
         title="Maximize Vocabulary Window"
       >
         {/* Maximize Icon */}
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="15 3 21 3 21 9"></polyline>
           <polyline points="9 21 3 21 3 15"></polyline>
           <line x1="21" y1="3" x2="14" y2="10"></line>
