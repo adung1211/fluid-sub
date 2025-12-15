@@ -34,6 +34,7 @@ export const FloatingWindow: React.FC<Props> = ({
   const [height, setHeight] = useState(settings.floatingWindowHeight || 350);
   const [isMinimized, setIsMinimized] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
   
   // Initialize position once based on viewport
   useEffect(() => {
@@ -54,12 +55,19 @@ export const FloatingWindow: React.FC<Props> = ({
     const startLeft = position.x;
     const startTop = position.y;
 
+    isDraggingRef.current = false;
+
     // Prevent default to avoid text selection etc
     e.preventDefault();
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        isDraggingRef.current = true;
+      }
+
       setPosition(prev => ({ ...prev, x: startLeft + dx, y: startTop + dy }));
     };
 
@@ -179,10 +187,7 @@ export const FloatingWindow: React.FC<Props> = ({
         id={ID_FLOATING_WINDOW}
         onMouseDown={handleDragStart}
         onClick={(e) => {
-          // Prevent drag from triggering click if moved? 
-          // For simplicity, just click to expand. Dragging usually involves movement > threshold.
-          // But a simple onMouseDown+Up without move is a click.
-          // Let's assume standard click behavior is fine.
+          if (isDraggingRef.current) return;
           setIsMinimized(false);
         }}
         style={{
