@@ -10,6 +10,7 @@ interface Props {
 
 export const SubtitleOverlay: React.FC<Props> = ({ htmlText, settings }) => {
   const [bottomPos, setBottomPos] = useState("10%");
+  const [fontScale, setFontScale] = useState(1);
 
   useEffect(() => {
     // Hide native YT captions
@@ -34,18 +35,48 @@ export const SubtitleOverlay: React.FC<Props> = ({ htmlText, settings }) => {
   }, [settings.enabled]);
 
   useEffect(() => {
-      // Monitor YouTube player controls to adjust position
+      // Monitor YouTube player controls to adjust position and view mode
       const player = document.getElementById("movie_player") || document.body;
-      const updatePosition = () => {
+      const flexy = document.querySelector("ytd-watch-flexy");
+
+      const updateState = () => {
+          // 1. Update Position based on controls
           const controlsHidden = player.classList.contains("ytp-autohide");
           setBottomPos(controlsHidden ? "10%" : "20%");
+
+          // 2. Update Font Scale based on view mode
+          const isFullscreen = !!document.fullscreenElement || player.classList.contains("ytp-fullscreen");
+          const isTheater = flexy?.hasAttribute("theater");
+
+          if (isFullscreen) {
+              setFontScale(1.8); 
+          } else if (isTheater) {
+              setFontScale(1.3);
+          } else {
+              setFontScale(1.0);
+          }
       };
 
-      const observer = new MutationObserver(updatePosition);
+      const observer = new MutationObserver(updateState);
+      
+      // Observe player for class changes (fullscreen, autohide)
       observer.observe(player, { attributes: true, attributeFilter: ["class"] });
-      updatePosition();
 
-      return () => observer.disconnect();
+      // Observe flexy for theater mode
+      if (flexy) {
+          observer.observe(flexy, { attributes: true });
+      }
+
+      // Also listen to standard fullscreen events
+      document.addEventListener("fullscreenchange", updateState);
+      
+      // Initial call
+      updateState();
+
+      return () => {
+          observer.disconnect();
+          document.removeEventListener("fullscreenchange", updateState);
+      };
   }, []);
 
 
@@ -73,7 +104,7 @@ export const SubtitleOverlay: React.FC<Props> = ({ htmlText, settings }) => {
         pointerEvents: "auto",
         userSelect: "text",
         cursor: "text",
-        fontSize: `${settings.fontSize}px`,
+        fontSize: `${settings.fontSize * fontScale}px`,
         backgroundColor: `rgba(0, 0, 0, ${settings.bgOpacity})`,
         color: `rgba(255, 255, 255, ${settings.textOpacity})`,
       }}
