@@ -25,10 +25,8 @@ async function init() {
   } as SubtitleSettings;
 
   const els = {
-    enabled: getCheck("enabled"),
     fontSize: getCheck("fontSize"),
     bgOpacity: getCheck("bgOpacity"),
-    floatingEnabled: getCheck("floatingEnabled"),
     floatingTime: getCheck("floatingTime"),
     btnManageKnown: getBtn("btn-manage-known"),
     btnClear: getBtn("clear-cache"),
@@ -39,10 +37,8 @@ async function init() {
   };
 
   // 1. Basic UI Setup
-  els.enabled.checked = settings.enabled;
   els.fontSize.value = String(settings.fontSize);
   els.bgOpacity.value = String(settings.bgOpacity);
-  els.floatingEnabled.checked = settings.floatingWindowEnabled ?? true;
   els.floatingTime.value = String(settings.floatingTimeWindow ?? 10);
   setText("val-floating-time", `${els.floatingTime.value}s`);
 
@@ -204,10 +200,10 @@ async function init() {
 
     const newSettings: SubtitleSettings = {
       ...settings,
-      enabled: els.enabled.checked,
+      enabled: true,
       fontSize: Number(els.fontSize.value),
       bgOpacity: Number(els.bgOpacity.value),
-      floatingWindowEnabled: els.floatingEnabled.checked,
+      floatingWindowEnabled: true,
       floatingTimeWindow: Number(els.floatingTime.value),
       highlights: newHighlights,
     };
@@ -229,12 +225,10 @@ async function init() {
 
   els.fontSize.addEventListener("input", () => saveSettings(false));
   els.bgOpacity.addEventListener("input", () => saveSettings(false));
-  els.floatingEnabled.addEventListener("change", () => saveSettings(false));
   els.floatingTime.addEventListener("input", () => {
     setText("val-floating-time", `${els.floatingTime.value}s`);
     saveSettings(false);
   });
-  els.enabled.addEventListener("change", () => saveSettings(false));
 
   els.btnClear.addEventListener("click", async () => {
     if (confirm("Clear temporary subtitles data?")) {
@@ -261,8 +255,7 @@ function updateUIState(s: SubtitleSettings) {
   setText("val-size", `${s.fontSize}px`);
   setText("val-bg", String(s.bgOpacity));
   const controls = document.getElementById("controls");
-  if (s.enabled) controls?.classList.remove("disabled");
-  else controls?.classList.add("disabled");
+  controls?.classList.remove("disabled");
 }
 
 init();
