@@ -14,7 +14,8 @@ export interface SubtitleSettings {
   bgOpacity: number;
   textOpacity: number;
   floatingWindowEnabled: boolean;
-  floatingTimeWindow: number;
+  floatingTimeWindowBack: number;
+  floatingTimeWindowFront: number;
   floatingWindowHeight: number;
   highlights: Record<string, HighlightOption>;
 }
@@ -25,7 +26,8 @@ export const DEFAULT_SETTINGS: SubtitleSettings = {
   bgOpacity: 0.6,
   textOpacity: 1.0,
   floatingWindowEnabled: true,
-  floatingTimeWindow: 10,
+  floatingTimeWindowBack: 3,
+  floatingTimeWindowFront: 5,
   floatingWindowHeight: 350,
   highlights: {
     // 2. Add B1 default config (Disabled by default, using a Blue color)

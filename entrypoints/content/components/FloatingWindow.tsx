@@ -134,8 +134,10 @@ export const FloatingWindow: React.FC<Props> = ({
 
   // --- Filter Items ---
   const getDisplayItems = () => {
-    const startWindow = currentTime - settings.floatingTimeWindow;
-    const endWindow = currentTime + settings.floatingTimeWindow;
+    const backTime = settings.floatingTimeWindowBack ?? 5;
+    const frontTime = settings.floatingTimeWindowFront ?? 15;
+    const startWindow = currentTime - backTime;
+    const endWindow = currentTime + frontTime;
     const items: DisplayItem[] = [];
 
     tokens.forEach((token) => {

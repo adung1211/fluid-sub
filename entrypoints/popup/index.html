@@ -170,8 +170,13 @@
             <label class="range-label" style="margin:0; font-size:14px; color:#fff;">Floating Word List</label>
         </div>
         
-        <label class="range-label">Time Window (±X sec): <span id="val-floating-time" class="value">10s</span></label>
-        <input type="range" id="floatingTime" min="3" max="30" step="1">
+        <label class="range-label">Time Before (sec): <span id="val-floating-back" class="value">5s</span></label>
+        <input type="range" id="floatingTimeBack" min="0" max="30" step="1">
+
+        <div style="height: 8px;"></div>
+
+        <label class="range-label">Time After (sec): <span id="val-floating-front" class="value">15s</span></label>
+        <input type="range" id="floatingTimeFront" min="0" max="60" step="1">
       </div>
 
       <div class="highlight-section">

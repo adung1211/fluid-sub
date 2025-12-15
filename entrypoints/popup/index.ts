@@ -27,7 +27,8 @@ async function init() {
   const els = {
     fontSize: getCheck("fontSize"),
     bgOpacity: getCheck("bgOpacity"),
-    floatingTime: getCheck("floatingTime"),
+    floatingTimeBack: getCheck("floatingTimeBack"),
+    floatingTimeFront: getCheck("floatingTimeFront"),
     btnManageKnown: getBtn("btn-manage-known"),
     btnClear: getBtn("clear-cache"),
     overlay: document.getElementById("word-overlay")!,
@@ -39,8 +40,10 @@ async function init() {
   // 1. Basic UI Setup
   els.fontSize.value = String(settings.fontSize);
   els.bgOpacity.value = String(settings.bgOpacity);
-  els.floatingTime.value = String(settings.floatingTimeWindow ?? 10);
-  setText("val-floating-time", `${els.floatingTime.value}s`);
+  els.floatingTimeBack.value = String(settings.floatingTimeWindowBack ?? 5);
+  setText("val-floating-back", `${els.floatingTimeBack.value}s`);
+  els.floatingTimeFront.value = String(settings.floatingTimeWindowFront ?? 15);
+  setText("val-floating-front", `${els.floatingTimeFront.value}s`);
 
   // 2. DYNAMIC Highlight Controls Setup
   // We store references to controls so we can update counts later
@@ -204,7 +207,8 @@ async function init() {
       fontSize: Number(els.fontSize.value),
       bgOpacity: Number(els.bgOpacity.value),
       floatingWindowEnabled: true,
-      floatingTimeWindow: Number(els.floatingTime.value),
+      floatingTimeWindowBack: Number(els.floatingTimeBack.value),
+      floatingTimeWindowFront: Number(els.floatingTimeFront.value),
       highlights: newHighlights,
     };
 
@@ -225,8 +229,12 @@ async function init() {
 
   els.fontSize.addEventListener("input", () => saveSettings(false));
   els.bgOpacity.addEventListener("input", () => saveSettings(false));
-  els.floatingTime.addEventListener("input", () => {
-    setText("val-floating-time", `${els.floatingTime.value}s`);
+  els.floatingTimeBack.addEventListener("input", () => {
+    setText("val-floating-back", `${els.floatingTimeBack.value}s`);
+    saveSettings(false);
+  });
+  els.floatingTimeFront.addEventListener("input", () => {
+    setText("val-floating-front", `${els.floatingTimeFront.value}s`);
     saveSettings(false);
   });
 
