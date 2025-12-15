@@ -32,6 +32,7 @@ export const FloatingWindow: React.FC<Props> = ({
 }) => {
   const [position, setPosition] = useState({ x: 0, y: 100, isSet: false });
   const [height, setHeight] = useState(settings.floatingWindowHeight || 350);
+  const [isMinimized, setIsMinimized] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Initialize position once based on viewport
@@ -52,6 +53,9 @@ export const FloatingWindow: React.FC<Props> = ({
     const startY = e.clientY;
     const startLeft = position.x;
     const startTop = position.y;
+
+    // Prevent default to avoid text selection etc
+    e.preventDefault();
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const dx = moveEvent.clientX - startX;
@@ -157,6 +161,10 @@ export const FloatingWindow: React.FC<Props> = ({
           from { opacity: 0; transform: translateY(10px) scale(0.95); max-height: 0; margin-bottom: 0; padding: 0 10px; border-width: 0; }
           to { opacity: 1; transform: translateY(0) scale(1); max-height: 100px; margin-bottom: 8px; padding: 10px; border-width: 2px; }
         }
+        @keyframes wxt-fade-in {
+          from { opacity: 0; transform: scale(0.8); }
+          to { opacity: 1; transform: scale(1); }
+        }
       `;
       document.head.appendChild(style);
     }
@@ -164,6 +172,51 @@ export const FloatingWindow: React.FC<Props> = ({
 
   if (!settings.enabled || !settings.floatingWindowEnabled) return null;
 
+  // --- Minimized View ---
+  if (isMinimized) {
+    return (
+      <div
+        id={ID_FLOATING_WINDOW}
+        onMouseDown={handleDragStart}
+        onClick={(e) => {
+          // Prevent drag from triggering click if moved? 
+          // For simplicity, just click to expand. Dragging usually involves movement > threshold.
+          // But a simple onMouseDown+Up without move is a click.
+          // Let's assume standard click behavior is fine.
+          setIsMinimized(false);
+        }}
+        style={{
+          position: "fixed",
+          top: position.y,
+          left: position.x,
+          width: "48px",
+          height: "48px",
+          backgroundColor: "rgba(20, 20, 20, 0.95)",
+          backdropFilter: "blur(8px)",
+          border: "1px solid rgba(255,255,255,0.2)",
+          borderRadius: "50%",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+          zIndex: "9999",
+          display: visible ? "flex" : "none",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          transition: "transform 0.2s ease, opacity 0.2s ease",
+          animation: "wxt-fade-in 0.2s ease",
+          color: "#fff"
+        }}
+        title="Expand Vocabulary Window"
+      >
+        {/* Book Icon */}
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+      </div>
+    );
+  }
+
+  // --- Expanded View ---
   return (
     <div
       id={ID_FLOATING_WINDOW}
@@ -193,7 +246,7 @@ export const FloatingWindow: React.FC<Props> = ({
       <div
         onMouseDown={handleDragStart}
         style={{
-          height: "24px",
+          height: "28px",
           background: "transparent",
           cursor: "grab",
           borderRadius: "16px 16px 0 0",
@@ -201,9 +254,42 @@ export const FloatingWindow: React.FC<Props> = ({
           flexShrink: 0,
           position: "relative",
           zIndex: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
-        <div style={{ width: "32px", height: "4px", background: "rgba(255,255,255,0.2)", margin: "10px auto", borderRadius: "2px" }}></div>
+        {/* Drag Handle */}
+        <div style={{ width: "32px", height: "4px", background: "rgba(255,255,255,0.2)", borderRadius: "2px" }}></div>
+        
+        {/* Minimize Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsMinimized(true);
+          }}
+          style={{
+            position: "absolute",
+            right: "8px",
+            top: "4px",
+            background: "transparent",
+            border: "none",
+            color: "rgba(255,255,255,0.6)",
+            cursor: "pointer",
+            padding: "4px",
+            borderRadius: "4px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)"}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+          title="Minimize"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
       </div>
 
       {/* Loading Overlay */}
