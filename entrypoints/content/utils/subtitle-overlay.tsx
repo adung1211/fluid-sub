@@ -43,6 +43,8 @@ class SubtitleOverlayController {
   private subtitles: Subtitle[] = [];
   private lastIndex = -1;
   private syncListener: (() => void) | null = null;
+  private ccObserver: MutationObserver | null = null;
+  private isCCEnabled: boolean = true;
 
   // --- Rendering ---
 
@@ -101,6 +103,7 @@ class SubtitleOverlayController {
     this.render();
 
     // Start Listeners
+    this.setupCCListener();
     this.startSync();
     this.setupStorageListener();
   }
@@ -111,9 +114,49 @@ class SubtitleOverlayController {
       this.syncListener = null;
     }
     
+    if (this.ccObserver) {
+      this.ccObserver.disconnect();
+      this.ccObserver = null;
+    }
+
     // Hide overlay
     this.state.htmlText = null;
     this.render();
+  }
+
+  private setupCCListener() {
+    const ccBtn = document.querySelector(".ytp-subtitles-button");
+    if (!ccBtn) return;
+
+    // Initial State
+    this.isCCEnabled = ccBtn.getAttribute("aria-pressed") === "true";
+
+    // Observer for changes (Click or Keyboard 'c')
+    this.ccObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === "attributes" && mutation.attributeName === "aria-pressed") {
+          const target = mutation.target as HTMLElement;
+          const newState = target.getAttribute("aria-pressed") === "true";
+          if (this.isCCEnabled !== newState) {
+            this.isCCEnabled = newState;
+            this.handleCCStateChange();
+          }
+        }
+      });
+    });
+
+    this.ccObserver.observe(ccBtn, { attributes: true });
+  }
+
+  private handleCCStateChange() {
+    if (!this.isCCEnabled) {
+      // Hide immediately
+      this.state.htmlText = null;
+      this.render();
+    } else {
+      // Trigger sync to show immediately if time aligns
+      if (this.syncListener) this.syncListener();
+    }
   }
 
   private startSync() {
@@ -131,7 +174,7 @@ class SubtitleOverlayController {
         // 1. Update Floating Window (Side Effect)
         updateFloatingWindow(this.wordsToHighlight, currentTime, this.state.settings);
 
-        if (!this.state.settings.enabled) {
+        if (!this.state.settings.enabled || !this.isCCEnabled) {
             if (this.state.htmlText !== null) {
                 this.state.htmlText = null;
                 this.render();
@@ -141,7 +184,7 @@ class SubtitleOverlayController {
 
         // 2. Check if we need to change subtitle
         // Optimization: Check current index first
-        if (this.lastIndex !== -1) {
+        if (this.lastIndex !== -1 && this.state.htmlText !== null) {
             const currentSub = this.subtitles[this.lastIndex];
             if (currentSub && currentTime >= currentSub.start && currentTime <= currentSub.end) {
                 // Still valid, do nothing
