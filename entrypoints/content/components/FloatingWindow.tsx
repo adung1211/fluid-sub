@@ -187,8 +187,15 @@ export const FloatingWindow: React.FC<Props> = ({
         }}
         style={{
           position: "fixed",
-          top: position.y,
-          left: position.x,
+          // Align center of minimized bubble (48x48) with center of minimize button in expanded view.
+          // Expanded Width: 220px. Minimize Button: Right 8px, Width ~24px -> Center at x+200.
+          // Minimized Width: 48px -> Center at x+24.
+          // Offset X: 200 - 24 = 176.
+          left: position.x + 176,
+          // Minimize Button Top: 4px, Height ~24px -> Center at y+16.
+          // Minimized Height: 48px -> Center at y+24.
+          // Offset Y: 16 - 24 = -8.
+          top: position.y - 8,
           width: "48px",
           height: "48px",
           backgroundColor: "rgba(20, 20, 20, 0.95)",
@@ -205,12 +212,14 @@ export const FloatingWindow: React.FC<Props> = ({
           animation: "wxt-fade-in 0.2s ease",
           color: "#fff"
         }}
-        title="Expand Vocabulary Window"
+        title="Maximize Vocabulary Window"
       >
-        {/* Book Icon */}
+        {/* Maximize Icon */}
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <polyline points="9 21 3 21 3 15"></polyline>
+          <line x1="21" y1="3" x2="14" y2="10"></line>
+          <line x1="3" y1="21" x2="10" y2="14"></line>
         </svg>
       </div>
     );
