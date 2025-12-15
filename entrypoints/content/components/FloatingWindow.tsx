@@ -171,6 +171,10 @@ export const FloatingWindow: React.FC<Props> = ({
           from { opacity: 0; transform: translateY(10px) scale(0.95); max-height: 0; margin-bottom: 0; padding: 0 10px; border-width: 0; }
           to { opacity: 1; transform: translateY(0) scale(1); max-height: 100px; margin-bottom: 8px; padding: 10px; border-width: 2px; }
         }
+        @keyframes wxt-slide-out {
+          from { opacity: 0.5; transform: scale(1); max-height: 100px; margin-bottom: 8px; padding: 10px; border-width: 2px; }
+          to { opacity: 0; transform: scale(0.9); max-height: 0; margin-bottom: 0; padding: 0; border-width: 0; }
+        }
         @keyframes wxt-fade-in {
           from { opacity: 0; transform: scale(0.8); }
           to { opacity: 1; transform: scale(1); }
@@ -370,6 +374,9 @@ const VocabItem: React.FC<{ item: DisplayItem, settings: SubtitleSettings, curre
   const isActive = currentTime >= item.start && currentTime <= item.end;
   const isPassed = currentTime > item.end;
   
+  const removalTime = item.end + (settings.floatingTimeWindowBack ?? 5);
+  const isExiting = currentTime > removalTime - 0.6;
+
   let badgeColor = "#999";
   if (item.token.cefr && settings.highlights[item.token.cefr]) {
     badgeColor = settings.highlights[item.token.cefr].color;
@@ -404,7 +411,9 @@ const VocabItem: React.FC<{ item: DisplayItem, settings: SubtitleSettings, curre
         filter: isPassed ? "grayscale(100%)" : "none",
         zIndex: isActive ? 2 : 1,
         boxShadow: isActive ? "0 4px 12px rgba(76, 175, 80, 0.15)" : "none",
-        animation: "wxt-slide-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards"
+        animation: isExiting 
+          ? "wxt-slide-out 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards"
+          : "wxt-slide-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards"
       }}
       className="wxt-vocab-item-react" 
     >
