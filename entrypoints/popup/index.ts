@@ -215,7 +215,7 @@ async function init() {
   // 4. View Logic (Shared)
   const openWordList = (
     label: string,
-    items: { text: string; isRemovable?: boolean }[],
+    items: { text: string; action: "add" | "remove" }[],
     showActions: boolean
   ) => {
     els.overlayTitle.textContent = label;
@@ -233,17 +233,44 @@ async function init() {
         span.textContent = item.text;
         div.appendChild(span);
 
-        if (item.isRemovable) {
+        if (item.action) {
           const btn = document.createElement("button");
-          btn.className = "word-remove-btn";
-          btn.textContent = "Remove";
-          btn.onclick = async () => {
-            const data = await browser.storage.local.get(KNOWN_WORDS_KEY);
-            let list = (data[KNOWN_WORDS_KEY] as string[]) || [];
-            list = list.filter((w) => w !== item.text);
-            await browser.storage.local.set({ [KNOWN_WORDS_KEY]: list });
-            div.remove();
-          };
+          btn.className = "word-remove-btn"; // Reuse base style
+          btn.style.marginRight = "8px";
+
+          if (item.action === "add") {
+            btn.textContent = "Know";
+            // Inline styling for 'positive' action
+            btn.style.borderColor = "#4CAF50";
+            btn.style.color = "#4CAF50";
+            btn.onmouseenter = () => {
+              btn.style.backgroundColor = "rgba(76, 175, 80, 0.1)";
+            };
+            btn.onmouseleave = () => {
+              btn.style.backgroundColor = "transparent";
+            };
+
+            btn.onclick = async () => {
+              const data = await browser.storage.local.get(KNOWN_WORDS_KEY);
+              let list = (data[KNOWN_WORDS_KEY] as string[]) || [];
+              if (!list.includes(item.text)) {
+                list.push(item.text);
+                await browser.storage.local.set({ [KNOWN_WORDS_KEY]: list });
+              }
+              // Visual feedback: remove from this list
+              div.remove();
+            };
+          } else if (item.action === "remove") {
+            btn.textContent = "Remove";
+            // Default styles are already 'danger' via CSS hover, but let's ensure
+            btn.onclick = async () => {
+              const data = await browser.storage.local.get(KNOWN_WORDS_KEY);
+              let list = (data[KNOWN_WORDS_KEY] as string[]) || [];
+              list = list.filter((w) => w !== item.text);
+              await browser.storage.local.set({ [KNOWN_WORDS_KEY]: list });
+              div.remove();
+            };
+          }
           div.appendChild(btn);
         }
         els.overlayContent.appendChild(div);
@@ -259,9 +286,21 @@ async function init() {
     const knownData = await browser.storage.local.get(KNOWN_WORDS_KEY);
     const knownSet = new Set((knownData[KNOWN_WORDS_KEY] as string[]) || []);
 
-    const words = masterList
-      .filter((t) => filterFn(t) && !knownSet.has(t.root || t.word))
-      .map((t) => ({ text: t.word, isRemovable: false }));
+    const uniqueLemmas = new Set<string>();
+
+    masterList.forEach((t) => {
+      if (filterFn(t)) {
+        const lemma = t.root || t.word;
+        if (!knownSet.has(lemma)) {
+          uniqueLemmas.add(lemma);
+        }
+      }
+    });
+
+    const words = Array.from(uniqueLemmas).map((text) => ({
+      text,
+      action: "add" as const,
+    }));
 
     openWordList(label, words, false);
   };
@@ -269,7 +308,7 @@ async function init() {
   els.btnManageKnown.addEventListener("click", async () => {
     const data = await browser.storage.local.get(KNOWN_WORDS_KEY);
     const list = (data[KNOWN_WORDS_KEY] as string[]) || [];
-    const items = list.map((w) => ({ text: w, isRemovable: true }));
+    const items = list.map((w) => ({ text: w, action: "remove" as const }));
     openWordList("Known Words (Hidden)", items, true);
   });
 
